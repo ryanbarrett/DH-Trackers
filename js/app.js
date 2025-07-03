@@ -417,6 +417,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             <summary>Details & Notes</summary>
                             <div class="monster-notes p-2 bg-light rounded mt-1">
                                 <div class="mb-2">
+                                    <label class="form-label small">Stats Details</label>
+                                    <textarea class="form-control form-control-sm monster-note" data-monster-id="${monster.id}" data-note-type="stats" rows="3" ${disabled}>${monster.stats || ''}</textarea>
+                                </div>
+                                <div class="mb-2">
                                     <label class="form-label small">Motives & Tactics</label>
                                     <textarea class="form-control form-control-sm monster-note" data-monster-id="${monster.id}" data-note-type="motives" rows="2" ${disabled}>${monster.notes.motives || ''}</textarea>
                                 </div>
@@ -485,8 +489,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 monster.name = e.target.value;
             } else if (e.target.classList.contains('monster-note')) {
                 const { noteType } = e.target.dataset;
-                if (!monster.notes) monster.notes = {};
-                monster.notes[noteType] = e.target.value;
+                if (noteType === 'stats') {
+                    monster.stats = e.target.value;
+                } else {
+                    if (!monster.notes) monster.notes = {};
+                    monster.notes[noteType] = e.target.value;
+                }
             } else if (e.target.classList.contains('monster-stat-input')) {
                 const { stat } = e.target.dataset;
                 const newValue = parseInt(e.target.value, 10) || 0;
@@ -524,11 +532,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 const checkedCount = e.target.parentElement.querySelectorAll('input:checked').length;
                 if (type === 'hp') {
                     monster.currentHP = checkedCount;
+                    // Find the hp-trackers div by finding checkboxes with the right data-id
+                    const hpTrackers = e.target.closest('.hp-trackers');
+                    const hpContainer = hpTrackers.parentElement;
+                    const hpText = hpTrackers.previousElementSibling;
+                    hpText.innerHTML = `<strong>HP:</strong> (${monster.currentHP}/${monster.maxHP})`;
+                    // Update maxed-out class on the parent div
+                    if (monster.currentHP === monster.maxHP) {
+                        hpContainer.classList.add('maxed-out');
+                    } else {
+                        hpContainer.classList.remove('maxed-out');
+                    }
                 } else {
                     monster.currentStress = checkedCount;
+                    // Find the stress-trackers div by finding checkboxes with the right data-id
+                    const stressTrackers = e.target.closest('.stress-trackers');
+                    const stressContainer = stressTrackers.parentElement;
+                    const stressText = stressTrackers.previousElementSibling;
+                    stressText.innerHTML = `<strong>Stress:</strong> (${monster.currentStress}/${monster.maxStress})`;
+                    // Update maxed-out class on the parent div
+                    if (monster.currentStress === monster.maxStress) {
+                        stressContainer.classList.add('maxed-out');
+                    } else {
+                        stressContainer.classList.remove('maxed-out');
+                    }
                 }
                 saveData();
-                renderMonsters(currentEncounter, isLocked);
             }
         });
     };
@@ -627,11 +656,41 @@ document.addEventListener('DOMContentLoaded', () => {
             if (activeTab === 'srd-tab') {
                 const selectedName = document.getElementById('srd-select').value;
                 const template = srdAdversaries.find(a => a.name === selectedName);
+                
+                // Parse stats from the stats string
+                const parseStats = (statsString) => {
+                    const stats = { maxHP: 0, maxStress: 0, majorThreshold: 0, severeThreshold: 0 };
+                    if (statsString) {
+                        const hpMatch = statsString.match(/HP:\*?\*?\s*(\d+)/i);
+                        const stressMatch = statsString.match(/Stress:\*?\*?\s*(\d+)/i);
+                        const thresholdMatch = statsString.match(/Thresholds:\*?\*?\s*(\d+)\/(\d+)/i);
+                        
+                        if (hpMatch) stats.maxHP = parseInt(hpMatch[1], 10);
+                        if (stressMatch) stats.maxStress = parseInt(stressMatch[1], 10);
+                        if (thresholdMatch) {
+                            stats.majorThreshold = parseInt(thresholdMatch[1], 10);
+                            stats.severeThreshold = parseInt(thresholdMatch[2], 10);
+                        }
+                    }
+                    return stats;
+                };
+                
+                const parsedStats = parseStats(template.stats);
                 newMonster = {
-                    ...template,
                     id: `m-${new Date().getTime()}`,
+                    name: template.name,
+                    maxHP: parsedStats.maxHP,
                     currentHP: 0,
+                    maxStress: parsedStats.maxStress,
                     currentStress: 0,
+                    majorThreshold: parsedStats.majorThreshold,
+                    severeThreshold: parsedStats.severeThreshold,
+                    stats: template.stats || '',
+                    notes: {
+                        motives: template.notes.motives_and_tactics || '',
+                        features: template.notes.features || ''
+                    },
+                    imageUrl: null
                 };
                  encounter.monsters.push(newMonster);
                  saveData();
@@ -649,6 +708,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     currentStress: 0,
                     majorThreshold: parseInt(document.getElementById('custom-major').value, 10) || 5,
                     severeThreshold: parseInt(document.getElementById('custom-severe').value, 10) || 10,
+                    stats: '',
                     notes: { motives: '', features: '' },
                     imageUrl: null
                 };

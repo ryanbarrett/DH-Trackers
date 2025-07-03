@@ -156,16 +156,18 @@ function parseAdversaryMarkdown(content, filename) {
     const lines = content.split('\n');
     const adversary = {
         name: '',
+        description: '',
+        stats: '',
         notes: {
-            motives: '',
-            tactics: '',
+            motives_and_tactics: '',
             features: ''
         }
     };
 
     let currentSection = '';
     let featuresContent = [];
-    let motivesLine = '';
+    let statsContent = [];
+    let descriptionFound = false;
 
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
@@ -175,15 +177,39 @@ function parseAdversaryMarkdown(content, filename) {
             adversary.name = line.substring(2).trim();
         }
         
-        // Extract motives & tactics
-        if (line.includes('Motives & Tactics:') || line.includes('Motives and Tactics:')) {
-            motivesLine = line.replace(/.*Motives & Tactics:\s*/, '').replace(/.*Motives and Tactics:\s*/, '').trim();
-            adversary.notes.motives = motivesLine;
+        // Extract description (usually in quotes or after tier info)
+        if (!descriptionFound && (line.startsWith('"') || line.includes('Tier') || line.includes('Solo'))) {
+            if (line.startsWith('"') && line.endsWith('"')) {
+                adversary.description = line.slice(1, -1);
+                descriptionFound = true;
+            } else if (i + 1 < lines.length) {
+                const nextLine = lines[i + 1].trim();
+                if (nextLine.startsWith('"') && nextLine.endsWith('"')) {
+                    adversary.description = nextLine.slice(1, -1);
+                    descriptionFound = true;
+                }
+            }
         }
         
-        // Track sections for features
-        if (line.startsWith('## ')) {
-            currentSection = line.substring(3).trim().toLowerCase();
+        // Extract motives & tactics
+        if (line.includes('Motives & Tactics:') || line.includes('Motives and Tactics:')) {
+            const motivesLine = line.replace(/.*Motives & Tactics:\s*/, '').replace(/.*Motives and Tactics:\s*/, '').trim();
+            adversary.notes.motives_and_tactics = motivesLine;
+        }
+        
+        // Track sections
+        if (line.startsWith('##') || line.toLowerCase().includes('difficulty:') || line.toLowerCase().includes('thresholds:')) {
+            currentSection = line.substring(2).trim().toLowerCase();
+            if (line.toLowerCase().includes('difficulty:') || line.toLowerCase().includes('thresholds:')) {
+                currentSection = 'stats';
+            }
+        }
+        
+        // Collect stats content (lines with game stats)
+        if (line.includes('Difficulty:') || line.includes('Thresholds:') || line.includes('HP:') || 
+            line.includes('Stress:') || line.includes('Attack:') || line.includes('Experience:') ||
+            (currentSection === 'stats' && line && !line.startsWith('#'))) {
+            statsContent.push(line);
         }
         
         // Collect features content
@@ -192,13 +218,9 @@ function parseAdversaryMarkdown(content, filename) {
         }
     }
     
-    // Join features content
+    // Join content
     adversary.notes.features = featuresContent.join('\n').trim();
-    
-    // If no separate tactics found, use the motives line for tactics too
-    if (!adversary.notes.tactics) {
-        adversary.notes.tactics = motivesLine;
-    }
+    adversary.stats = statsContent.join('\n').trim();
     
     return adversary;
 }
