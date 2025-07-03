@@ -30,6 +30,9 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                             if (session.fear === undefined) session.fear = 0;
                             if (session.isLocked === undefined) session.isLocked = false;
+                            if (session.name === undefined) {
+                                session.name = `Session ${new Date(session.date).toLocaleDateString()}`;
+                            }
                         });
                     }
                 });
@@ -110,8 +113,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 item.href = '#';
                 item.className = `list-group-item list-group-item-action ${session.isLocked ? 'text-muted' : ''}`;
                 item.innerHTML = `
-                    <h5 class="mb-1"><i class="fas ${session.isLocked ? 'fa-lock' : 'fa-lock-open'} me-2"></i>Session on ${new Date(session.date).toLocaleDateString()}</h5>
-                    <small>Encounters: ${session.encounters.length}</small>
+                    <h5 class="mb-1"><i class="fas ${session.isLocked ? 'fa-lock' : 'fa-lock-open'} me-2"></i>${session.name}</h5>
+                    <small>${new Date(session.date).toLocaleDateString()} • Encounters: ${session.encounters.length}</small>
                 `;
                 item.addEventListener('click', (e) => {
                     e.preventDefault();
@@ -124,8 +127,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('back-to-campaigns').addEventListener('click', () => navigate('campaigns'));
         document.getElementById('new-session-btn').addEventListener('click', () => {
+            const sessionName = prompt('Enter session name:', `Session ${campaign.sessions.length + 1}`);
+            if (sessionName === null) return;
+            
             const newSession = {
                 id: `s-${new Date().getTime()}`,
+                name: sessionName || `Session ${campaign.sessions.length + 1}`,
                 date: new Date().toISOString(),
                 startingFear: 0,
                 fear: 0,
@@ -159,6 +166,10 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="card mb-4">
                 <div class="card-body">
                     <div class="row">
+                        <div class="col-md-3">
+                            <label for="session-name" class="form-label">Session Name</label>
+                            <input type="text" class="form-control" id="session-name" value="${session.name}" ${disabled}>
+                        </div>
                         <div class="col-md-3">
                             <label for="session-date" class="form-label">Date</label>
                             <input type="date" class="form-control" id="session-date" value="${session.date.split('T')[0]}" ${disabled}>
@@ -202,6 +213,7 @@ document.addEventListener('DOMContentLoaded', () => {
             input.addEventListener('input', (e) => {
                 const { id, value } = e.target;
                 if (id === 'session-date') session.date = new Date(value).toISOString();
+                else if (id === 'session-name') session.name = value;
                 else if (id === 'characterNotes') session.characterNotes = value;
                 else session[id] = isNaN(Number(value)) ? value : Number(value);
                 saveData();
