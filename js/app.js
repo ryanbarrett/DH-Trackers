@@ -1,5 +1,6 @@
 
 
+
 document.addEventListener('DOMContentLoaded', () => {
     const app = document.getElementById('app');
     const newCampaignBtn = document.getElementById('new-campaign-btn');
@@ -109,7 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 item.href = '#';
                 item.className = `list-group-item list-group-item-action ${session.isLocked ? 'text-muted' : ''}`;
                 item.innerHTML = `
-                    <h5 class="mb-1">${session.isLocked ? '<i class="fas fa-lock"></i>' : ''} Session on ${new Date(session.date).toLocaleDateString()}</h5>
+                    <h5 class="mb-1"><i class="fas ${session.isLocked ? 'fa-lock' : 'fa-lock-open'} me-2"></i>Session on ${new Date(session.date).toLocaleDateString()}</h5>
                     <small>Encounters: ${session.encounters.length}</small>
                 `;
                 item.addEventListener('click', (e) => {
@@ -151,7 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h3>Session Details</h3>
                 <div>
-                    <button class="btn btn-warning me-2" id="toggle-lock-btn">${session.isLocked ? 'Unlock' : 'Lock'}</button>
+                    <button class="btn btn-warning me-2" id="toggle-lock-btn">${session.isLocked ? '<i class="fas fa-lock"></i> Unlock' : '<i class="fas fa-lock-open"></i> Lock'}</button>
                     <button class="btn btn-secondary" id="back-to-sessions">Back to Sessions</button>
                 </div>
             </div>
@@ -306,7 +307,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="row">
                     <div class="col-md-4">
                         <input type="text" class="form-control form-control-lg mb-2 monster-name-input" value="${monster.name}" data-monster-id="${monster.id}" ${disabled}>
-                        <img src="${monster.imageUrl || ''}" class="monster-image img-fluid rounded" alt="${monster.imageUrl ? monster.name : 'No image'}">
+                        <img src="${monster.imageUrl || ''}" class="monster-image img-fluid rounded ${!monster.imageUrl ? 'd-none' : ''}" alt="${monster.name}">
                         <button class="btn btn-sm btn-secondary w-100 mt-2 set-image-btn" data-monster-id="${monster.id}" ${disabled}>Set Image</button>
                     </div>
                     <div class="col-md-8">
@@ -328,11 +329,11 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <input type="number" class="form-control form-control-sm monster-stat-input" value="${monster.severeThreshold || ''}" data-monster-id="${monster.id}" data-stat="severeThreshold" ${disabled}>
                             </div>
                         </div>
-                        <div class="mb-2">
+                        <div class="mb-2 ${monster.currentHP === monster.maxHP ? 'maxed-out' : ''}">
                             <strong>HP:</strong> (${monster.currentHP}/${monster.maxHP})
                             <div class="hp-trackers">${generateCheckboxes('hp', monster.id, monster.maxHP, monster.currentHP, disabled)}</div>
                         </div>
-                        <div>
+                        <div class="${monster.currentStress === monster.maxStress ? 'maxed-out' : ''}">
                             <strong>Stress:</strong> (${monster.currentStress}/${monster.maxStress})
                             <div class="stress-trackers">${generateCheckboxes('stress', monster.id, monster.maxStress, monster.currentStress, disabled)}</div>
                         </div>
@@ -370,6 +371,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 input.accept = 'image/*';
                 input.onchange = (event) => {
                     const file = event.target.files[0];
+                    if (!file) return;
                     const reader = new FileReader();
                     reader.onload = (readerEvent) => {
                         const monster = encounter.monsters.find(m => m.id === monsterId);
@@ -407,25 +409,49 @@ document.addEventListener('DOMContentLoaded', () => {
 
         monstersListDiv.addEventListener('change', (e) => {
             if (e.target.type === 'checkbox') {
-                const [type, monsterId] = e.target.dataset.id.split('-');
-                const monster = encounter.monsters.find(m => m.id === monsterId);
+                const parts = e.target.dataset.id.split('-');
+                const type = parts[0];
+                const monsterId = parts.slice(1).join('-');
+
+                // Fetch the latest session and encounter from the state
+                const currentCampaign = state.campaigns.find(c => c.id === state.selectedCampaignId);
+                const currentSession = currentCampaign ? currentCampaign.sessions.find(s => s.id === state.selectedSessionId) : null;
+                const currentEncounter = currentSession ? currentSession.encounters.find(enc => enc.id === encounter.id) : null;
+
+                if (!currentEncounter) {
+                    console.error('Error: Current encounter not found in state.');
+                    return;
+                }
+
+                const monster = currentEncounter.monsters.find(m => m.id === monsterId);
+
+                if (!monster) {
+                    console.error('Error: Monster with ID', monsterId, 'not found in current encounter.');
+                    return;
+                }
+
                 const checkedCount = e.target.parentElement.querySelectorAll('input:checked').length;
                 if (type === 'hp') {
-                    monster.currentHP = monster.maxHP - checkedCount;
+                    monster.currentHP = checkedCount;
                 } else {
-                    monster.currentStress = monster.maxStress - checkedCount;
+                    monster.currentStress = checkedCount;
                 }
                 saveData();
-                renderMonsters(encounter, isLocked);
+                renderMonsters(currentEncounter, isLocked);
             }
         });
     };
 
     const generateCheckboxes = (type, monsterId, max, current, disabled) => {
         let html = '';
-        const damaged = max - current;
         for (let i = 0; i < max; i++) {
-            html += `<input type="checkbox" class="form-check-input" data-id="${type}-${monsterId}" ${i < damaged ? 'checked' : ''} ${disabled}>`;
+            let isChecked = false;
+            if (type === 'hp') {
+                isChecked = (i < current);
+            } else { // type === 'stress'
+                isChecked = (i < current);
+            }
+            html += `<input type="checkbox" class="form-check-input" data-id="${type}-${monsterId}" ${isChecked ? 'checked' : ''} ${disabled}>`;
         }
         return html;
     };
@@ -513,8 +539,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 newMonster = {
                     ...template,
                     id: `m-${new Date().getTime()}`,
-                    currentHP: template.maxHP,
-                    currentStress: template.maxStress,
+                    currentHP: 0,
+                    currentStress: 0,
                 };
                  encounter.monsters.push(newMonster);
                  saveData();
@@ -527,9 +553,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     id: `m-${new Date().getTime()}`,
                     name: document.getElementById('custom-name').value || 'Custom Monster',
                     maxHP: maxHP,
-                    currentHP: maxHP,
+                    currentHP: 0,
                     maxStress: maxStress,
-                    currentStress: maxStress,
+                    currentStress: 0,
                     majorThreshold: parseInt(document.getElementById('custom-major').value, 10) || 5,
                     severeThreshold: parseInt(document.getElementById('custom-severe').value, 10) || 10,
                     notes: { motives: '', features: '' },
@@ -611,8 +637,33 @@ document.addEventListener('DOMContentLoaded', () => {
         input.click();
     });
 
+    document.getElementById('delete-storage-btn').addEventListener('click', () => {
+        if (confirm('This will export your data as a backup and then clear all local storage. Are you sure you want to continue?')) {
+            // First export the data as backup
+            const dataStr = JSON.stringify(state.campaigns, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+            const exportFileDefaultName = `daggerheart_backup_${new Date().toISOString().split('T')[0]}.json`;
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
+            
+            // Clear local storage after a short delay to ensure download starts
+            setTimeout(() => {
+                localStorage.removeItem('daggerheartTracker');
+                state.campaigns = [];
+                state.currentView = 'campaigns';
+                state.selectedCampaignId = null;
+                state.selectedSessionId = null;
+                render();
+                alert('Local storage cleared successfully. Your data has been exported as a backup.');
+            }, 100);
+        }
+    });
+
     // --- INITIALIZATION ---
     loadData();
     render();
 });
+
 

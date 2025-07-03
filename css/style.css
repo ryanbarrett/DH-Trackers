@@ -1,4 +1,3 @@
-
 .hp-trackers input, .stress-trackers input {
     margin: 0 2px;
 }
@@ -19,4 +18,11 @@ details > summary {
     object-fit: cover;
     background-color: #f8f9fa;
     border: 1px solid #dee2e6;
+}
+
+.maxed-out {
+    background-color: #ffdddd;
+    border: 1px solid red;
+    padding: 5px;
+    border-radius: 5px;
 }
