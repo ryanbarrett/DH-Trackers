@@ -1,0 +1,22 @@
+
+.hp-trackers input, .stress-trackers input {
+    margin: 0 2px;
+}
+
+.monster-card .form-check-input {
+    min-width: 1.2em;
+    min-height: 1.2em;
+}
+
+details > summary {
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.monster-image {
+    max-height: 200px;
+    width: 100%;
+    object-fit: cover;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+}
