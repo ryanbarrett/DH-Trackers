@@ -352,6 +352,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </details>
                     </div>
                 </div>
+                 <button class="btn btn-sm btn-secondary duplicate-monster-btn" data-monster-id="${monster.id}" ${disabled}>Duplicate</button>
                  <button class="btn btn-sm btn-danger delete-monster-btn" data-monster-id="${monster.id}" ${disabled}>Delete Monster</button>
             `;
             monstersListDiv.appendChild(monsterDiv);
@@ -363,6 +364,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 encounter.monsters = encounter.monsters.filter(m => m.id !== monsterId);
                 saveData();
                 renderMonsters(encounter, isLocked);
+            }
+            if (e.target.classList.contains('duplicate-monster-btn')) {
+                const monsterId = e.target.dataset.monsterId;
+                const monster = encounter.monsters.find(m => m.id === monsterId);
+                if (monster) {
+                    const duplicatedMonster = {
+                        ...monster,
+                        id: `m-${Date.now()}`,
+                        name: `${monster.name} (Copy)`
+                    };
+                    encounter.monsters.push(duplicatedMonster);
+                    saveData();
+                    renderMonsters(encounter, isLocked);
+                }
             }
             if (e.target.classList.contains('set-image-btn')) {
                 const monsterId = e.target.dataset.monsterId;
