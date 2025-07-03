@@ -79,14 +79,35 @@ document.addEventListener('DOMContentLoaded', () => {
         const list = document.createElement('div');
         list.className = 'list-group';
         state.campaigns.forEach(campaign => {
-            const item = document.createElement('button');
-            item.type = 'button';
-            item.className = 'list-group-item list-group-item-action';
-            item.textContent = campaign.name;
-            item.addEventListener('click', () => navigate('sessions', campaign.id));
+            const item = document.createElement('div');
+            item.className = 'list-group-item d-flex justify-content-between align-items-center';
+            item.innerHTML = `
+                <button type="button" class="btn btn-link text-start flex-grow-1 p-0 campaign-link" data-campaign-id="${campaign.id}">${campaign.name}</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary rename-campaign-btn" data-campaign-id="${campaign.id}">Rename</button>
+            `;
             list.appendChild(item);
         });
         app.appendChild(list);
+
+        // Add event listeners for campaign links and rename buttons
+        app.addEventListener('click', (e) => {
+            if (e.target.classList.contains('campaign-link')) {
+                const campaignId = e.target.dataset.campaignId;
+                navigate('sessions', campaignId);
+            }
+            if (e.target.classList.contains('rename-campaign-btn')) {
+                const campaignId = e.target.dataset.campaignId;
+                const campaign = state.campaigns.find(c => c.id === campaignId);
+                if (campaign) {
+                    const newName = prompt('Enter new campaign name:', campaign.name);
+                    if (newName && newName !== campaign.name) {
+                        campaign.name = newName;
+                        saveData();
+                        render();
+                    }
+                }
+            }
+        });
     };
 
     const renderSessionListView = () => {
@@ -187,10 +208,27 @@ document.addEventListener('DOMContentLoaded', () => {
                             </div>
                         </div>
                         <div class="col-md-3">
-                            <label for="shortRests" class="form-label">Rests (Short/Long)</label>
-                             <div class="input-group">
-                                <input type="number" class="form-control" id="shortRests" value="${session.shortRests}" ${disabled}>
-                                <input type="number" class="form-control" id="longRests" value="${session.longRests}" ${disabled}>
+                            <label class="form-label">Short Rests</label>
+                            <div class="d-flex gap-2">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="shortRest1" ${session.shortRests >= 1 ? 'checked' : ''} ${disabled}>
+                                    <label class="form-check-label" for="shortRest1">1</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="shortRest2" ${session.shortRests >= 2 ? 'checked' : ''} ${disabled}>
+                                    <label class="form-check-label" for="shortRest2">2</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="shortRest3" ${session.shortRests >= 3 ? 'checked' : ''} ${disabled}>
+                                    <label class="form-check-label" for="shortRest3">3</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="longRests" class="form-label">Long Rests</label>
+                            <div class="d-flex gap-2 align-items-center">
+                                <input type="number" class="form-control" id="longRests" value="${session.longRests}" ${disabled} readonly>
+                                <button class="btn btn-primary" type="button" id="long-rest-btn" ${disabled}>Long Rest</button>
                             </div>
                         </div>
                     </div>
@@ -230,6 +268,32 @@ document.addEventListener('DOMContentLoaded', () => {
             session.fear += 1;
             saveData();
             render();
+        });
+
+        document.getElementById('long-rest-btn').addEventListener('click', () => {
+            session.longRests += 1;
+            session.shortRests = 0; // Clear short rests on long rest
+            saveData();
+            render();
+        });
+
+        // Short rest checkbox handlers
+        ['shortRest1', 'shortRest2', 'shortRest3'].forEach((id, index) => {
+            const checkbox = document.getElementById(id);
+            if (checkbox) {
+                checkbox.addEventListener('change', () => {
+                    const restNumber = index + 1;
+                    if (checkbox.checked) {
+                        // If checking a box, ensure all previous boxes are also checked
+                        session.shortRests = Math.max(session.shortRests, restNumber);
+                    } else {
+                        // If unchecking a box, uncheck all subsequent boxes
+                        session.shortRests = Math.min(session.shortRests, index);
+                    }
+                    saveData();
+                    render();
+                });
+            }
         });
 
         document.getElementById('toggle-lock-btn').addEventListener('click', () => {
