@@ -308,7 +308,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const newEncounter = {
                 id: `e-${new Date().getTime()}`,
                 notes: '',
-                monsters: []
+                adversaries: []
             };
             session.encounters.push(newEncounter);
             saveData();
@@ -396,18 +396,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="card-header d-flex justify-content-between align-items-center">
                     Encounter
                     <div>
-                        <button class="btn btn-success btn-sm me-2 add-monster-btn" data-encounter-id="${encounter.id}" ${disabled}>Add Monster</button>
+                        <button class="btn btn-success btn-sm me-2 add-adversary-btn" data-encounter-id="${encounter.id}" ${disabled}>Add Adversary</button>
                         <button class="btn btn-sm btn-outline-danger delete-encounter-btn" data-encounter-id="${encounter.id}" ${disabled}>Delete Encounter</button>
                     </div>
                 </div>
                 <div class="card-body">
-                    <div id="monsters-list-${encounter.id}" class="mb-3"></div>
+                    <div id="adversaries-list-${encounter.id}" class="mb-3"></div>
                     <h5>General Encounter Notes</h5>
                     <textarea class="form-control encounter-notes" data-encounter-id="${encounter.id}" placeholder="General notes for the encounter..." ${disabled}>${encounter.notes}</textarea>
                 </div>
             `;
             encountersListDiv.appendChild(encounterCard);
-            renderMonsters(encounter, session.isLocked);
+            renderAdversaries(encounter, session.isLocked);
         });
 
         encountersListDiv.addEventListener('click', (e) => {
@@ -417,9 +417,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 saveData();
                 renderEncounters(session);
             }
-            if (e.target.classList.contains('add-monster-btn')) {
+            if (e.target.classList.contains('add-adversary-btn')) {
                 const encounterId = e.target.dataset.encounterId;
-                renderMonsterModal(session, encounterId);
+                renderAdversaryModal(session, encounterId);
             }
         });
         encountersListDiv.addEventListener('input', (e) => {
@@ -432,105 +432,105 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    const renderMonsters = (encounter, isLocked) => {
-        const monstersListDiv = document.getElementById(`monsters-list-${encounter.id}`);
+    const renderAdversaries = (encounter, isLocked) => {
+        const adversariesListDiv = document.getElementById(`adversaries-list-${encounter.id}`);
         const disabled = isLocked ? 'disabled' : '';
-        monstersListDiv.innerHTML = '';
-        if (encounter.monsters.length === 0) {
-            monstersListDiv.innerHTML = '<small>No monsters in this encounter.</small>';
+        adversariesListDiv.innerHTML = '';
+        if (encounter.adversaries.length === 0) {
+            adversariesListDiv.innerHTML = '<small>No adversaries in this encounter.</small>';
             return;
         }
 
-        encounter.monsters.forEach(monster => {
-            const monsterDiv = document.createElement('div');
-            monsterDiv.className = 'monster-card mb-3 p-3 border rounded';
-            monsterDiv.innerHTML = `
+        encounter.adversaries.forEach(adversary => {
+            const adversaryDiv = document.createElement('div');
+            adversaryDiv.className = 'adversary-card mb-3 p-3 border rounded';
+            adversaryDiv.innerHTML = `
                 <div class="row">
                     <div class="col-md-4">
-                        <input type="text" class="form-control form-control-lg mb-2 monster-name-input" value="${monster.name}" data-monster-id="${monster.id}" ${disabled}>
-                        <img src="${monster.imageUrl || ''}" class="monster-image img-fluid rounded ${!monster.imageUrl ? 'd-none' : ''}" alt="${monster.name}">
-                        <button class="btn btn-sm btn-secondary w-100 mt-2 set-image-btn" data-monster-id="${monster.id}" ${disabled}>Set Image</button>
+                        <input type="text" class="form-control form-control-lg mb-2 adversary-name-input" value="${adversary.name}" data-adversary-id="${adversary.id}" ${disabled}>
+                        <img src="${adversary.imageUrl || ''}" class="adversary-image img-fluid rounded ${!adversary.imageUrl ? 'd-none' : ''}" alt="${adversary.name}">
+                        <button class="btn btn-sm btn-secondary w-100 mt-2 set-image-btn" data-adversary-id="${adversary.id}" ${disabled}>Set Image</button>
                     </div>
                     <div class="col-md-8">
                         <div class="row g-2 mb-2">
                             <div class="col">
                                 <label class="form-label-sm">Max HP</label>
-                                <input type="number" class="form-control form-control-sm monster-stat-input" value="${monster.maxHP}" data-monster-id="${monster.id}" data-stat="maxHP" ${disabled}>
+                                <input type="number" class="form-control form-control-sm adversary-stat-input" value="${adversary.maxHP}" data-adversary-id="${adversary.id}" data-stat="maxHP" ${disabled}>
                             </div>
                             <div class="col">
                                 <label class="form-label-sm">Max Stress</label>
-                                <input type="number" class="form-control form-control-sm monster-stat-input" value="${monster.maxStress}" data-monster-id="${monster.id}" data-stat="maxStress" ${disabled}>
+                                <input type="number" class="form-control form-control-sm adversary-stat-input" value="${adversary.maxStress}" data-adversary-id="${adversary.id}" data-stat="maxStress" ${disabled}>
                             </div>
                             <div class="col">
                                 <label class="form-label-sm">Major</label>
-                                <input type="number" class="form-control form-control-sm monster-stat-input" value="${monster.majorThreshold || ''}" data-monster-id="${monster.id}" data-stat="majorThreshold" ${disabled}>
+                                <input type="number" class="form-control form-control-sm adversary-stat-input" value="${adversary.majorThreshold || ''}" data-adversary-id="${adversary.id}" data-stat="majorThreshold" ${disabled}>
                             </div>
                             <div class="col">
                                 <label class="form-label-sm">Severe</label>
-                                <input type="number" class="form-control form-control-sm monster-stat-input" value="${monster.severeThreshold || ''}" data-monster-id="${monster.id}" data-stat="severeThreshold" ${disabled}>
+                                <input type="number" class="form-control form-control-sm adversary-stat-input" value="${adversary.severeThreshold || ''}" data-adversary-id="${adversary.id}" data-stat="severeThreshold" ${disabled}>
                             </div>
                         </div>
-                        <div class="mb-2 ${monster.currentHP === monster.maxHP ? 'maxed-out' : ''}">
-                            <strong>HP:</strong> (${monster.currentHP}/${monster.maxHP})
-                            <div class="hp-trackers">${generateCheckboxes('hp', monster.id, monster.maxHP, monster.currentHP, disabled)}</div>
+                        <div class="mb-2 ${adversary.currentHP === adversary.maxHP ? 'maxed-out' : ''}">
+                            <strong>HP:</strong> (${adversary.currentHP}/${adversary.maxHP})
+                            <div class="hp-trackers">${generateCheckboxes('hp', adversary.id, adversary.maxHP, adversary.currentHP, disabled)}</div>
                         </div>
-                        <div class="${monster.currentStress === monster.maxStress ? 'maxed-out' : ''}">
-                            <strong>Stress:</strong> (${monster.currentStress}/${monster.maxStress})
-                            <div class="stress-trackers">${generateCheckboxes('stress', monster.id, monster.maxStress, monster.currentStress, disabled)}</div>
+                        <div class="${adversary.currentStress === adversary.maxStress ? 'maxed-out' : ''}">
+                            <strong>Stress:</strong> (${adversary.currentStress}/${adversary.maxStress})
+                            <div class="stress-trackers">${generateCheckboxes('stress', adversary.id, adversary.maxStress, adversary.currentStress, disabled)}</div>
                         </div>
                         <details class="mt-2">
                             <summary>Details & Notes</summary>
-                            <div class="monster-notes p-2 bg-light rounded mt-1">
+                            <div class="adversary-notes p-2 bg-light rounded mt-1">
                                 <div class="mb-2">
                                     <label class="form-label small">Stats Details</label>
-                                    <textarea class="form-control form-control-sm monster-note" data-monster-id="${monster.id}" data-note-type="stats" rows="3" ${disabled}>${monster.stats || ''}</textarea>
+                                    <textarea class="form-control form-control-sm adversary-note" data-adversary-id="${adversary.id}" data-note-type="stats" rows="3" ${disabled}>${adversary.stats || ''}</textarea>
                                 </div>
                                 <div class="mb-2">
                                     <label class="form-label small">Motives & Tactics</label>
-                                    <textarea class="form-control form-control-sm monster-note" data-monster-id="${monster.id}" data-note-type="motives" rows="2" ${disabled}>${monster.notes.motives || ''}</textarea>
+                                    <textarea class="form-control form-control-sm adversary-note" data-adversary-id="${adversary.id}" data-note-type="motives" rows="2" ${disabled}>${adversary.notes.motives || ''}</textarea>
                                 </div>
                                 <div class="mb-2">
                                     <label class="form-label small">Attacks & Features</label>
-                                    <textarea class="form-control form-control-sm monster-note" data-monster-id="${monster.id}" data-note-type="features" rows="4" ${disabled}>${monster.notes.features || ''}</textarea>
+                                    <textarea class="form-control form-control-sm adversary-note" data-adversary-id="${adversary.id}" data-note-type="features" rows="4" ${disabled}>${adversary.notes.features || ''}</textarea>
                                 </div>
                             </div>
                         </details>
                     </div>
                 </div>
-                 <button class="btn btn-sm btn-secondary duplicate-monster-btn" data-monster-id="${monster.id}" ${disabled}>Duplicate</button>
-                 <button class="btn btn-sm btn-danger delete-monster-btn" data-monster-id="${monster.id}" ${disabled}>Delete Monster</button>
+                 <button class="btn btn-sm btn-secondary duplicate-adversary-btn" data-adversary-id="${adversary.id}" ${disabled}>Duplicate</button>
+                 <button class="btn btn-sm btn-danger delete-adversary-btn" data-adversary-id="${adversary.id}" ${disabled}>Delete Adversary</button>
             `;
-            monstersListDiv.appendChild(monsterDiv);
+            adversariesListDiv.appendChild(adversaryDiv);
         });
 
-        monstersListDiv.addEventListener('click', (e) => {
-            if (e.target.classList.contains('delete-monster-btn')) {
-                const monsterId = e.target.dataset.monsterId;
-                const monster = encounter.monsters.find(m => m.id === monsterId);
-                const monsterName = monster ? monster.name : 'this adversary';
+        adversariesListDiv.addEventListener('click', (e) => {
+            if (e.target.classList.contains('delete-adversary-btn')) {
+                const adversaryId = e.target.dataset.adversaryId;
+                const adversary = encounter.adversaries.find(m => m.id === adversaryId);
+                const adversaryName = adversary ? adversary.name : 'this adversary';
                 
-                if (confirm(`Delete ${monsterName}? For real?`)) {
-                    encounter.monsters = encounter.monsters.filter(m => m.id !== monsterId);
+                if (confirm(`Delete ${adversaryName}? For real?`)) {
+                    encounter.adversaries = encounter.adversaries.filter(m => m.id !== adversaryId);
                     saveData();
-                    renderMonsters(encounter, isLocked);
+                    renderAdversaries(encounter, isLocked);
                 }
             }
-            if (e.target.classList.contains('duplicate-monster-btn')) {
-                const monsterId = e.target.dataset.monsterId;
-                const monster = encounter.monsters.find(m => m.id === monsterId);
-                if (monster) {
-                    const duplicatedMonster = {
-                        ...monster,
+            if (e.target.classList.contains('duplicate-adversary-btn')) {
+                const adversaryId = e.target.dataset.adversaryId;
+                const adversary = encounter.adversaries.find(m => m.id === adversaryId);
+                if (adversary) {
+                    const duplicatedAdversary = {
+                        ...adversary,
                         id: `m-${Date.now()}`,
-                        name: `${monster.name} (Copy)`
+                        name: `${adversary.name} (Copy)`
                     };
-                    encounter.monsters.push(duplicatedMonster);
+                    encounter.adversaries.push(duplicatedAdversary);
                     saveData();
-                    renderMonsters(encounter, isLocked);
+                    renderAdversaries(encounter, isLocked);
                 }
             }
             if (e.target.classList.contains('set-image-btn')) {
-                const monsterId = e.target.dataset.monsterId;
+                const adversaryId = e.target.dataset.adversaryId;
                 const input = document.createElement('input');
                 input.type = 'file';
                 input.accept = 'image/*';
@@ -539,10 +539,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (!file) return;
                     const reader = new FileReader();
                     reader.onload = (readerEvent) => {
-                        const monster = encounter.monsters.find(m => m.id === monsterId);
-                        monster.imageUrl = readerEvent.target.result;
+                        const adversary = encounter.adversaries.find(m => m.id === adversaryId);
+                        adversary.imageUrl = readerEvent.target.result;
                         saveData();
-                        renderMonsters(encounter, isLocked);
+                        renderAdversaries(encounter, isLocked);
                     };
                     reader.readAsDataURL(file);
                 };
@@ -550,37 +550,37 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        monstersListDiv.addEventListener('input', (e) => {
-            const { monsterId } = e.target.dataset;
-            const monster = encounter.monsters.find(m => m.id === monsterId);
-            if (!monster) return;
+        adversariesListDiv.addEventListener('input', (e) => {
+            const { adversaryId } = e.target.dataset;
+            const adversary = encounter.adversaries.find(m => m.id === adversaryId);
+            if (!adversary) return;
 
-            if (e.target.classList.contains('monster-name-input')) {
-                monster.name = e.target.value;
-            } else if (e.target.classList.contains('monster-note')) {
+            if (e.target.classList.contains('adversary-name-input')) {
+                adversary.name = e.target.value;
+            } else if (e.target.classList.contains('adversary-note')) {
                 const { noteType } = e.target.dataset;
                 if (noteType === 'stats') {
-                    monster.stats = e.target.value;
+                    adversary.stats = e.target.value;
                 } else {
-                    if (!monster.notes) monster.notes = {};
-                    monster.notes[noteType] = e.target.value;
+                    if (!adversary.notes) adversary.notes = {};
+                    adversary.notes[noteType] = e.target.value;
                 }
-            } else if (e.target.classList.contains('monster-stat-input')) {
+            } else if (e.target.classList.contains('adversary-stat-input')) {
                 const { stat } = e.target.dataset;
                 const newValue = parseInt(e.target.value, 10) || 0;
-                monster[stat] = newValue;
-                if (stat === 'maxHP') monster.currentHP = Math.min(monster.currentHP, newValue);
-                if (stat === 'maxStress') monster.currentStress = Math.min(monster.currentStress, newValue);
-                renderMonsters(encounter, isLocked); // Re-render for stat changes
+                adversary[stat] = newValue;
+                if (stat === 'maxHP') adversary.currentHP = Math.min(adversary.currentHP, newValue);
+                if (stat === 'maxStress') adversary.currentStress = Math.min(adversary.currentStress, newValue);
+                renderAdversaries(encounter, isLocked); // Re-render for stat changes
             }
             saveData();
         });
 
-        monstersListDiv.addEventListener('change', (e) => {
+        adversariesListDiv.addEventListener('change', (e) => {
             if (e.target.type === 'checkbox') {
                 const parts = e.target.dataset.id.split('-');
                 const type = parts[0];
-                const monsterId = parts.slice(1).join('-');
+                const adversaryId = parts.slice(1).join('-');
 
                 // Fetch the latest session and encounter from the state
                 const currentCampaign = state.campaigns.find(c => c.id === state.selectedCampaignId);
@@ -592,16 +592,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
-                const monster = currentEncounter.monsters.find(m => m.id === monsterId);
+                const adversary = currentEncounter.adversaries.find(m => m.id === adversaryId);
 
-                if (!monster) {
-                    console.error('Error: Monster with ID', monsterId, 'not found in current encounter.');
+                if (!adversary) {
+                    console.error('Error: Adversary with ID', adversaryId, 'not found in current encounter.');
                     return;
                 }
 
                 const checkedCount = e.target.parentElement.querySelectorAll('input:checked').length;
                 if (type === 'hp') {
-                    monster.currentHP = checkedCount;
+                    adversary.currentHP = checkedCount;
                     // Find the hp-trackers div and its parent container
                     const hpTrackers = e.target.closest('.hp-trackers');
                     const hpContainer = hpTrackers.parentElement;
@@ -618,17 +618,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     // Add new text at the beginning
                     const newText = document.createElement('span');
-                    newText.innerHTML = `<strong>HP:</strong> (${monster.currentHP}/${monster.maxHP})`;
+                    newText.innerHTML = `<strong>HP:</strong> (${adversary.currentHP}/${adversary.maxHP})`;
                     hpContainer.insertBefore(newText, hpTrackers);
                     
                     // Update maxed-out class on the parent div
-                    if (monster.currentHP === monster.maxHP) {
+                    if (adversary.currentHP === adversary.maxHP) {
                         hpContainer.classList.add('maxed-out');
                     } else {
                         hpContainer.classList.remove('maxed-out');
                     }
                 } else {
-                    monster.currentStress = checkedCount;
+                    adversary.currentStress = checkedCount;
                     // Find the stress-trackers div and its parent container
                     const stressTrackers = e.target.closest('.stress-trackers');
                     const stressContainer = stressTrackers.parentElement;
@@ -645,11 +645,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     // Add new text at the beginning
                     const newText = document.createElement('span');
-                    newText.innerHTML = `<strong>Stress:</strong> (${monster.currentStress}/${monster.maxStress})`;
+                    newText.innerHTML = `<strong>Stress:</strong> (${adversary.currentStress}/${adversary.maxStress})`;
                     stressContainer.insertBefore(newText, stressTrackers);
                     
                     // Update maxed-out class on the parent div
-                    if (monster.currentStress === monster.maxStress) {
+                    if (adversary.currentStress === adversary.maxStress) {
                         stressContainer.classList.add('maxed-out');
                     } else {
                         stressContainer.classList.remove('maxed-out');
@@ -660,7 +660,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    const generateCheckboxes = (type, monsterId, max, current, disabled) => {
+    const generateCheckboxes = (type, adversaryId, max, current, disabled) => {
         let html = '';
         for (let i = 0; i < max; i++) {
             let isChecked = false;
@@ -669,25 +669,25 @@ document.addEventListener('DOMContentLoaded', () => {
             } else { // type === 'stress'
                 isChecked = (i < current);
             }
-            html += `<input type="checkbox" class="form-check-input" data-id="${type}-${monsterId}" ${isChecked ? 'checked' : ''} ${disabled}>`;
+            html += `<input type="checkbox" class="form-check-input" data-id="${type}-${adversaryId}" ${isChecked ? 'checked' : ''} ${disabled}>`;
         }
         return html;
     };
 
-    const renderMonsterModal = (session, encounterId) => {
-        const existingModal = document.getElementById('monster-modal');
+    const renderAdversaryModal = (session, encounterId) => {
+        const existingModal = document.getElementById('adversary-modal');
         if (existingModal) existingModal.remove();
 
         const modalHtml = `
-        <div class="modal fade" id="monster-modal" tabindex="-1">
+        <div class="modal fade" id="adversary-modal" tabindex="-1">
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">Add Monster</h5>
+                        <h5 class="modal-title">Add Adversary</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
-                        <ul class="nav nav-tabs" id="monster-tab" role="tablist">
+                        <ul class="nav nav-tabs" id="adversary-tab" role="tablist">
                             <li class="nav-item" role="presentation">
                                 <button class="nav-link active" id="srd-tab" data-bs-toggle="tab" data-bs-target="#srd-panel" type="button">From SRD</button>
                             </li>
@@ -695,7 +695,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <button class="nav-link" id="custom-tab" data-bs-toggle="tab" data-bs-target="#custom-panel" type="button">Custom</button>
                             </li>
                         </ul>
-                        <div class="tab-content" id="monster-tab-content">
+                        <div class="tab-content" id="adversary-tab-content">
                             <div class="tab-pane fade show active p-3" id="srd-panel">
                                 <label for="srd-select" class="form-label">Select Adversary</label>
                                 <select class="form-select" id="srd-select">
@@ -736,20 +736,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                        <button type="button" class="btn btn-primary" id="add-monster-confirm">Add</button>
+                        <button type="button" class="btn btn-primary" id="add-adversary-confirm">Add</button>
                     </div>
                 </div>
             </div>
         </div>
         `;
         document.body.insertAdjacentHTML('beforeend', modalHtml);
-        const modal = new bootstrap.Modal(document.getElementById('monster-modal'));
+        const modal = new bootstrap.Modal(document.getElementById('adversary-modal'));
         modal.show();
 
-        document.getElementById('add-monster-confirm').addEventListener('click', () => {
+        document.getElementById('add-adversary-confirm').addEventListener('click', () => {
             const encounter = session.encounters.find(e => e.id === encounterId);
-            const activeTab = document.querySelector('#monster-tab .active').id;
-            let newMonster;
+            const activeTab = document.querySelector('#adversary-tab .active').id;
+            let newAdversary;
 
             if (activeTab === 'srd-tab') {
                 const selectedName = document.getElementById('srd-select').value;
@@ -774,7 +774,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
                 
                 const parsedStats = parseStats(template.stats);
-                newMonster = {
+                newAdversary = {
                     id: `m-${new Date().getTime()}`,
                     name: template.name,
                     maxHP: parsedStats.maxHP,
@@ -790,16 +790,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     },
                     imageUrl: null
                 };
-                 encounter.monsters.push(newMonster);
+                 encounter.adversaries.push(newAdversary);
                  saveData();
-                 renderMonsters(encounter, session.isLocked);
+                 renderAdversaries(encounter, session.isLocked);
                  modal.hide();
             } else {
                 const maxHP = parseInt(document.getElementById('custom-hp').value, 10) || 10;
                 const maxStress = parseInt(document.getElementById('custom-stress').value, 10) || 5;
-                newMonster = {
+                newAdversary = {
                     id: `m-${new Date().getTime()}`,
-                    name: document.getElementById('custom-name').value || 'Custom Monster',
+                    name: document.getElementById('custom-name').value || 'Custom Adversary',
                     maxHP: maxHP,
                     currentHP: 0,
                     maxStress: maxStress,
@@ -815,17 +815,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (imageFile) {
                     const reader = new FileReader();
                     reader.onload = (readerEvent) => {
-                        newMonster.imageUrl = readerEvent.target.result;
-                        encounter.monsters.push(newMonster);
+                        newAdversary.imageUrl = readerEvent.target.result;
+                        encounter.adversaries.push(newAdversary);
                         saveData();
-                        renderMonsters(encounter, session.isLocked);
+                        renderAdversaries(encounter, session.isLocked);
                         modal.hide();
                     };
                     reader.readAsDataURL(imageFile);
                 } else {
-                    encounter.monsters.push(newMonster);
+                    encounter.adversaries.push(newAdversary);
                     saveData();
-                    renderMonsters(encounter, session.isLocked);
+                    renderAdversaries(encounter, session.isLocked);
                     modal.hide();
                 }
             }
