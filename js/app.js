@@ -872,10 +872,27 @@ document.addEventListener('DOMContentLoaded', () => {
                     try {
                         const content = readerEvent.target.result;
                         const importedCampaigns = JSON.parse(content);
-                        if (Array.isArray(importedCampaigns) && confirm('This will replace all your current data. Are you sure?')) {
-                            state.campaigns = importedCampaigns;
+                        if (Array.isArray(importedCampaigns)) {
+                            let updatedCount = 0;
+                            let addedCount = 0;
+                            
+                            importedCampaigns.forEach(importedCampaign => {
+                                const existingIndex = state.campaigns.findIndex(c => c.name === importedCampaign.name);
+                                
+                                if (existingIndex !== -1) {
+                                    // Update existing campaign with same name
+                                    state.campaigns[existingIndex] = importedCampaign;
+                                    updatedCount++;
+                                } else {
+                                    // Add new campaign
+                                    state.campaigns.push(importedCampaign);
+                                    addedCount++;
+                                }
+                            });
+                            
                             saveData();
                             navigate('campaigns');
+                            alert(`Import complete! Updated ${updatedCount} campaigns, added ${addedCount} new campaigns.`);
                         } else {
                             alert('Invalid file format.');
                         }
