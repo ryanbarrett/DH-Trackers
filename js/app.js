@@ -506,9 +506,14 @@ document.addEventListener('DOMContentLoaded', () => {
         monstersListDiv.addEventListener('click', (e) => {
             if (e.target.classList.contains('delete-monster-btn')) {
                 const monsterId = e.target.dataset.monsterId;
-                encounter.monsters = encounter.monsters.filter(m => m.id !== monsterId);
-                saveData();
-                renderMonsters(encounter, isLocked);
+                const monster = encounter.monsters.find(m => m.id === monsterId);
+                const monsterName = monster ? monster.name : 'this adversary';
+                
+                if (confirm(`Delete ${monsterName}? For real?`)) {
+                    encounter.monsters = encounter.monsters.filter(m => m.id !== monsterId);
+                    saveData();
+                    renderMonsters(encounter, isLocked);
+                }
             }
             if (e.target.classList.contains('duplicate-monster-btn')) {
                 const monsterId = e.target.dataset.monsterId;
