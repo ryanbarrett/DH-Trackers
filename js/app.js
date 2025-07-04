@@ -532,11 +532,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 const checkedCount = e.target.parentElement.querySelectorAll('input:checked').length;
                 if (type === 'hp') {
                     monster.currentHP = checkedCount;
-                    // Find the hp-trackers div by finding checkboxes with the right data-id
+                    // Find the hp-trackers div and its parent container
                     const hpTrackers = e.target.closest('.hp-trackers');
                     const hpContainer = hpTrackers.parentElement;
-                    const hpText = hpTrackers.previousElementSibling;
-                    hpText.innerHTML = `<strong>HP:</strong> (${monster.currentHP}/${monster.maxHP})`;
+                    
+                    // Find and update the text node (everything before the hp-trackers div)
+                    const textNodes = [];
+                    for (let node of hpContainer.childNodes) {
+                        if (node.nodeType === Node.TEXT_NODE || (node.nodeType === Node.ELEMENT_NODE && node !== hpTrackers)) {
+                            textNodes.push(node);
+                        }
+                    }
+                    // Remove old text nodes and elements (except trackers)
+                    textNodes.forEach(node => node.remove());
+                    
+                    // Add new text at the beginning
+                    const newText = document.createElement('span');
+                    newText.innerHTML = `<strong>HP:</strong> (${monster.currentHP}/${monster.maxHP})`;
+                    hpContainer.insertBefore(newText, hpTrackers);
+                    
                     // Update maxed-out class on the parent div
                     if (monster.currentHP === monster.maxHP) {
                         hpContainer.classList.add('maxed-out');
@@ -545,11 +559,25 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 } else {
                     monster.currentStress = checkedCount;
-                    // Find the stress-trackers div by finding checkboxes with the right data-id
+                    // Find the stress-trackers div and its parent container
                     const stressTrackers = e.target.closest('.stress-trackers');
                     const stressContainer = stressTrackers.parentElement;
-                    const stressText = stressTrackers.previousElementSibling;
-                    stressText.innerHTML = `<strong>Stress:</strong> (${monster.currentStress}/${monster.maxStress})`;
+                    
+                    // Find and update the text node (everything before the stress-trackers div)
+                    const textNodes = [];
+                    for (let node of stressContainer.childNodes) {
+                        if (node.nodeType === Node.TEXT_NODE || (node.nodeType === Node.ELEMENT_NODE && node !== stressTrackers)) {
+                            textNodes.push(node);
+                        }
+                    }
+                    // Remove old text nodes and elements (except trackers)
+                    textNodes.forEach(node => node.remove());
+                    
+                    // Add new text at the beginning
+                    const newText = document.createElement('span');
+                    newText.innerHTML = `<strong>Stress:</strong> (${monster.currentStress}/${monster.maxStress})`;
+                    stressContainer.insertBefore(newText, stressTrackers);
+                    
                     // Update maxed-out class on the parent div
                     if (monster.currentStress === monster.maxStress) {
                         stressContainer.classList.add('maxed-out');
