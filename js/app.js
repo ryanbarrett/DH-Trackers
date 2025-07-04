@@ -4,8 +4,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     const app = document.getElementById('app');
     const newCampaignBtn = document.getElementById('new-campaign-btn');
-    const importBtn = document.getElementById('import-btn');
-    const exportBtn = document.getElementById('export-btn');
 
     let state = {
         campaigns: [],
@@ -62,6 +60,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
             case 'sessionDetail':
                 renderSessionDetailView();
+                break;
+            case 'settings':
+                renderSettingsView();
                 break;
             case 'campaigns':
             default:
@@ -312,6 +313,70 @@ document.addEventListener('DOMContentLoaded', () => {
             session.encounters.push(newEncounter);
             saveData();
             renderEncounters(session);
+        });
+    };
+
+    const renderSettingsView = () => {
+        app.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Settings</h2>
+                <button class="btn btn-secondary" id="back-to-campaigns-btn">Back to Campaigns</button>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Data Management</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <button class="btn btn-success w-100" id="import-btn">
+                                        <i class="fas fa-upload me-2"></i>Import Data
+                                    </button>
+                                    <small class="text-muted">Import campaigns from a file</small>
+                                </div>
+                                <div class="col-md-4">
+                                    <button class="btn btn-info w-100" id="export-btn">
+                                        <i class="fas fa-download me-2"></i>Export Data
+                                    </button>
+                                    <small class="text-muted">Download your campaigns as a file</small>
+                                </div>
+                                <div class="col-md-4">
+                                    <button class="btn btn-danger w-100" id="delete-storage-btn">
+                                        <i class="fas fa-trash me-2"></i>Clear All Data
+                                    </button>
+                                    <small class="text-muted">Delete all campaigns permanently</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card mt-4">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Application Info</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p><strong>Version:</strong> 1.0.0</p>
+                                    <p><strong>SRD Adversaries:</strong> ${typeof srdAdversaries !== 'undefined' ? srdAdversaries.length : 'Loading...'}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p><strong>Campaigns:</strong> ${state.campaigns ? state.campaigns.length : 0}</p>
+                                    <p><strong>Total Sessions:</strong> ${state.campaigns ? state.campaigns.reduce((total, campaign) => total + (campaign.sessions ? campaign.sessions.length : 0), 0) : 0}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Add event listener for back button
+        document.getElementById('back-to-campaigns-btn').addEventListener('click', () => {
+            navigate('campaigns');
         });
     };
 
@@ -778,66 +843,72 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    exportBtn.addEventListener('click', () => {
-        const dataStr = JSON.stringify(state.campaigns, null, 2);
-        const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-        const exportFileDefaultName = 'daggerheart_tracker_data.json';
-        const linkElement = document.createElement('a');
-        linkElement.setAttribute('href', dataUri);
-        linkElement.setAttribute('download', exportFileDefaultName);
-        linkElement.click();
-    });
-
-    importBtn.addEventListener('click', () => {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.json';
-        input.onchange = e => {
-            const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onload = readerEvent => {
-                try {
-                    const content = readerEvent.target.result;
-                    const importedCampaigns = JSON.parse(content);
-                    if (Array.isArray(importedCampaigns)) {
-                        state.campaigns = importedCampaigns;
-                        saveData();
-                        navigate('campaigns');
-                    } else {
-                        alert('Invalid file format.');
-                    }
-                } catch (error) {
-                    alert('Error reading or parsing file.');
-                    console.error(error);
-                }
-            }
-            reader.readAsText(file);
-        }
-        input.click();
-    });
-
-    document.getElementById('delete-storage-btn').addEventListener('click', () => {
-        if (confirm('This will export your data as a backup and then clear all local storage. Are you sure you want to continue?')) {
-            // First export the data as backup
+    document.addEventListener('click', (e) => {
+        if (e.target.id === 'export-btn') {
             const dataStr = JSON.stringify(state.campaigns, null, 2);
             const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-            const exportFileDefaultName = `daggerheart_backup_${new Date().toISOString().split('T')[0]}.json`;
+            const exportFileDefaultName = 'daggerheart_tracker_data.json';
             const linkElement = document.createElement('a');
             linkElement.setAttribute('href', dataUri);
             linkElement.setAttribute('download', exportFileDefaultName);
             linkElement.click();
-            
-            // Clear local storage after a short delay to ensure download starts
-            setTimeout(() => {
-                localStorage.removeItem('daggerheartTracker');
-                state.campaigns = [];
-                state.currentView = 'campaigns';
-                state.selectedCampaignId = null;
-                state.selectedSessionId = null;
-                render();
-                alert('Local storage cleared successfully. Your data has been exported as a backup.');
-            }, 100);
         }
+        
+        if (e.target.id === 'import-btn') {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = e => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = readerEvent => {
+                    try {
+                        const content = readerEvent.target.result;
+                        const importedCampaigns = JSON.parse(content);
+                        if (Array.isArray(importedCampaigns) && confirm('This will replace all your current data. Are you sure?')) {
+                            state.campaigns = importedCampaigns;
+                            saveData();
+                            navigate('campaigns');
+                        } else {
+                            alert('Invalid file format.');
+                        }
+                    } catch (error) {
+                        alert('Error reading or parsing file.');
+                        console.error(error);
+                    }
+                }
+                reader.readAsText(file);
+            }
+            input.click();
+        }
+        
+        if (e.target.id === 'delete-storage-btn') {
+            if (confirm('This will export your data as a backup and then clear all local storage. Are you sure you want to continue?')) {
+                // First export the data as backup
+                const dataStr = JSON.stringify(state.campaigns, null, 2);
+                const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+                const exportFileDefaultName = `daggerheart_backup_${new Date().toISOString().split('T')[0]}.json`;
+                const linkElement = document.createElement('a');
+                linkElement.setAttribute('href', dataUri);
+                linkElement.setAttribute('download', exportFileDefaultName);
+                linkElement.click();
+                
+                // Clear local storage after a short delay to ensure download starts
+                setTimeout(() => {
+                    localStorage.removeItem('daggerheartTracker');
+                    state.campaigns = [];
+                    render();
+                    alert('Local storage cleared successfully. Your data has been exported as a backup.');
+                }, 100);
+            }
+        }
+    });
+
+
+    document.getElementById('settings-btn').addEventListener('click', () => {
+        navigate('settings');
     });
 
     // --- INITIALIZATION ---
