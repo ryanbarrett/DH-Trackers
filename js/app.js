@@ -824,75 +824,131 @@ document.addEventListener('DOMContentLoaded', () => {
     const renderAdversaries = (encounter, isLocked) => {
         const adversariesListDiv = document.getElementById(`adversaries-list-${encounter.id}`);
         const disabled = isLocked ? 'disabled' : '';
-        adversariesListDiv.innerHTML = '';
+        
+        // Remove all existing event listeners by cloning the node
+        const newAdversariesListDiv = adversariesListDiv.cloneNode(false);
+        adversariesListDiv.parentNode.replaceChild(newAdversariesListDiv, adversariesListDiv);
+        
+        // Use the new div for the rest of the function
+        const currentAdversariesListDiv = document.getElementById(`adversaries-list-${encounter.id}`);
+        currentAdversariesListDiv.innerHTML = '';
+        
         if (encounter.adversaries.length === 0) {
-            adversariesListDiv.innerHTML = '<small>No adversaries in this encounter.</small>';
+            currentAdversariesListDiv.innerHTML = '<small>No adversaries in this encounter.</small>';
             return;
         }
 
         encounter.adversaries.forEach(adversary => {
             const adversaryDiv = document.createElement('div');
-            adversaryDiv.className = 'adversary-card mb-3 p-3 border rounded';
+            adversaryDiv.className = 'adversary-card mb-3 border rounded';
+            
+            // Set default collapsed state if not defined
+            if (adversary.isCollapsed === undefined) {
+                adversary.isCollapsed = false;
+            }
+            
             adversaryDiv.innerHTML = `
-                <div class="row">
-                    <div class="col-md-4">
-                        <input type="text" class="form-control form-control-lg mb-2 adversary-name-input" value="${adversary.name}" data-adversary-id="${adversary.id}" ${disabled}>
-                        <img src="${adversary.imageUrl || ''}" class="adversary-image img-fluid rounded ${!adversary.imageUrl ? 'd-none' : ''}" alt="${adversary.name}" data-adversary-id="${adversary.id}" style="cursor: ${adversary.imageUrl ? 'pointer' : 'default'};">
-                        <button class="btn btn-sm btn-secondary w-100 mt-2 set-image-btn" data-adversary-id="${adversary.id}" ${disabled}>Set Image</button>
+                <div class="adversary-header d-flex justify-content-between align-items-center p-3 bg-light" data-adversary-id="${adversary.id}">
+                    <div class="d-flex align-items-center flex-grow-1">
+                        <button class="btn btn-sm btn-outline-secondary me-2 collapse-toggle-btn" data-adversary-id="${adversary.id}" type="button" title="${adversary.isCollapsed ? 'Expand' : 'Collapse'} adversary details">
+                            <span class="collapse-arrow" data-adversary-id="${adversary.id}">${adversary.isCollapsed ? '\u25b6' : '\u25bc'}</span>
+                        </button>
+                        <input type="text" class="form-control form-control-sm adversary-name-input" value="${adversary.name}" data-adversary-id="${adversary.id}" ${disabled}>
                     </div>
-                    <div class="col-md-8">
-                        <div class="row g-2 mb-2">
-                            <div class="col">
-                                <label class="form-label-sm">Max HP</label>
-                                <input type="number" class="form-control form-control-sm adversary-stat-input" value="${adversary.maxHP}" data-adversary-id="${adversary.id}" data-stat="maxHP" ${disabled}>
-                            </div>
-                            <div class="col">
-                                <label class="form-label-sm">Max Stress</label>
-                                <input type="number" class="form-control form-control-sm adversary-stat-input" value="${adversary.maxStress}" data-adversary-id="${adversary.id}" data-stat="maxStress" ${disabled}>
-                            </div>
-                            <div class="col">
-                                <label class="form-label-sm">Major</label>
-                                <input type="number" class="form-control form-control-sm adversary-stat-input" value="${adversary.majorThreshold || ''}" data-adversary-id="${adversary.id}" data-stat="majorThreshold" ${disabled}>
-                            </div>
-                            <div class="col">
-                                <label class="form-label-sm">Severe</label>
-                                <input type="number" class="form-control form-control-sm adversary-stat-input" value="${adversary.severeThreshold || ''}" data-adversary-id="${adversary.id}" data-stat="severeThreshold" ${disabled}>
-                            </div>
-                        </div>
-                        <div class="mb-2 ${adversary.currentHP === adversary.maxHP ? 'maxed-out' : ''}">
-                            <strong>HP:</strong> (${adversary.currentHP}/${adversary.maxHP})
-                            <div class="hp-trackers">${generateCheckboxes('hp', adversary.id, adversary.maxHP, adversary.currentHP, disabled)}</div>
-                        </div>
-                        <div class="${adversary.currentStress === adversary.maxStress ? 'maxed-out' : ''}">
-                            <strong>Stress:</strong> (${adversary.currentStress}/${adversary.maxStress})
-                            <div class="stress-trackers">${generateCheckboxes('stress', adversary.id, adversary.maxStress, adversary.currentStress, disabled)}</div>
-                        </div>
-                        <details class="mt-2">
-                            <summary>Details & Notes</summary>
-                            <div class="adversary-notes p-2 bg-light rounded mt-1">
-                                <div class="mb-2">
-                                    <label class="form-label small">Stats Details</label>
-                                    <textarea class="form-control form-control-sm adversary-note" data-adversary-id="${adversary.id}" data-note-type="stats" rows="3" ${disabled}>${adversary.stats || ''}</textarea>
-                                </div>
-                                <div class="mb-2">
-                                    <label class="form-label small">Motives & Tactics</label>
-                                    <textarea class="form-control form-control-sm adversary-note" data-adversary-id="${adversary.id}" data-note-type="motives" rows="2" ${disabled}>${adversary.notes.motives || ''}</textarea>
-                                </div>
-                                <div class="mb-2">
-                                    <label class="form-label small">Attacks & Features</label>
-                                    <textarea class="form-control form-control-sm adversary-note" data-adversary-id="${adversary.id}" data-note-type="features" rows="4" ${disabled}>${adversary.notes.features || ''}</textarea>
-                                </div>
-                            </div>
-                        </details>
+                    <div class="d-flex gap-2 align-items-center">
+                        <span class="badge bg-danger hp-badge">HP: ${adversary.currentHP}/${adversary.maxHP}</span>
+                        <span class="badge bg-warning text-dark stress-badge">Stress: ${adversary.currentStress}/${adversary.maxStress}</span>
                     </div>
                 </div>
-                 <button class="btn btn-sm btn-secondary duplicate-adversary-btn" data-adversary-id="${adversary.id}" ${disabled}>Duplicate</button>
-                 <button class="btn btn-sm btn-danger delete-adversary-btn" data-adversary-id="${adversary.id}" ${disabled}>Delete Adversary</button>
+                <div class="adversary-content ${adversary.isCollapsed ? 'd-none' : ''}" data-adversary-id="${adversary.id}">
+                    <div class="p-3">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <img src="${adversary.imageUrl || ''}" class="adversary-image img-fluid rounded ${!adversary.imageUrl ? 'd-none' : ''}" alt="${adversary.name}" data-adversary-id="${adversary.id}" style="cursor: ${adversary.imageUrl ? 'pointer' : 'default'};">
+                                <button class="btn btn-sm btn-secondary w-100 mt-2 set-image-btn" data-adversary-id="${adversary.id}" ${disabled}>Set Image</button>
+                            </div>
+                            <div class="col-md-8">
+                                <div class="row g-2 mb-2">
+                                    <div class="col">
+                                        <label class="form-label-sm">Max HP</label>
+                                        <input type="number" class="form-control form-control-sm adversary-stat-input" value="${adversary.maxHP}" data-adversary-id="${adversary.id}" data-stat="maxHP" ${disabled}>
+                                    </div>
+                                    <div class="col">
+                                        <label class="form-label-sm">Max Stress</label>
+                                        <input type="number" class="form-control form-control-sm adversary-stat-input" value="${adversary.maxStress}" data-adversary-id="${adversary.id}" data-stat="maxStress" ${disabled}>
+                                    </div>
+                                    <div class="col">
+                                        <label class="form-label-sm">Major</label>
+                                        <input type="number" class="form-control form-control-sm adversary-stat-input" value="${adversary.majorThreshold || ''}" data-adversary-id="${adversary.id}" data-stat="majorThreshold" ${disabled}>
+                                    </div>
+                                    <div class="col">
+                                        <label class="form-label-sm">Severe</label>
+                                        <input type="number" class="form-control form-control-sm adversary-stat-input" value="${adversary.severeThreshold || ''}" data-adversary-id="${adversary.id}" data-stat="severeThreshold" ${disabled}>
+                                    </div>
+                                </div>
+                                <div class="mb-2 ${adversary.currentHP === adversary.maxHP ? 'maxed-out' : ''}">
+                                    <strong>HP:</strong> (${adversary.currentHP}/${adversary.maxHP})
+                                    <div class="hp-trackers">${generateCheckboxes('hp', adversary.id, adversary.maxHP, adversary.currentHP, disabled)}</div>
+                                </div>
+                                <div class="${adversary.currentStress === adversary.maxStress ? 'maxed-out' : ''}">
+                                    <strong>Stress:</strong> (${adversary.currentStress}/${adversary.maxStress})
+                                    <div class="stress-trackers">${generateCheckboxes('stress', adversary.id, adversary.maxStress, adversary.currentStress, disabled)}</div>
+                                </div>
+                                <details class="mt-2">
+                                    <summary>Details & Notes</summary>
+                                    <div class="adversary-notes p-2 bg-light rounded mt-1">
+                                        <div class="mb-2">
+                                            <label class="form-label small">Stats Details</label>
+                                            <textarea class="form-control form-control-sm adversary-note" data-adversary-id="${adversary.id}" data-note-type="stats" rows="3" ${disabled}>${adversary.stats || ''}</textarea>
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label small">Motives & Tactics</label>
+                                            <textarea class="form-control form-control-sm adversary-note" data-adversary-id="${adversary.id}" data-note-type="motives" rows="2" ${disabled}>${adversary.notes.motives || ''}</textarea>
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label small">Attacks & Features</label>
+                                            <textarea class="form-control form-control-sm adversary-note" data-adversary-id="${adversary.id}" data-note-type="features" rows="4" ${disabled}>${adversary.notes.features || ''}</textarea>
+                                        </div>
+                                    </div>
+                                </details>
+                        </div>
+                        <div class="d-flex gap-2 mt-3">
+                            <button class="btn btn-sm btn-secondary duplicate-adversary-btn" data-adversary-id="${adversary.id}" ${disabled}>Duplicate</button>
+                            <button class="btn btn-sm btn-danger delete-adversary-btn" data-adversary-id="${adversary.id}" ${disabled}>Delete Adversary</button>
+                        </div>
+                    </div>
+                </div>
             `;
-            adversariesListDiv.appendChild(adversaryDiv);
+            currentAdversariesListDiv.appendChild(adversaryDiv);
         });
 
-        adversariesListDiv.addEventListener('click', (e) => {
+        currentAdversariesListDiv.addEventListener('click', (e) => {
+            // Handle collapse/expand
+            if (e.target.classList.contains('collapse-toggle-btn') || e.target.classList.contains('collapse-arrow')) {
+                const adversaryId = e.target.dataset.adversaryId;
+                const adversary = encounter.adversaries.find(m => m.id === adversaryId);
+                if (adversary) {
+                    adversary.isCollapsed = !adversary.isCollapsed;
+                    saveData();
+                    
+                    // Update just this adversary's UI instead of full re-render
+                    const contentDiv = document.querySelector(`.adversary-content[data-adversary-id="${adversaryId}"]`);
+                    const arrow = document.querySelector(`.collapse-arrow[data-adversary-id="${adversaryId}"]`);
+                    const toggleBtn = document.querySelector(`.collapse-toggle-btn[data-adversary-id="${adversaryId}"]`);
+                    
+                    if (contentDiv && arrow && toggleBtn) {
+                        if (adversary.isCollapsed) {
+                            contentDiv.classList.add('d-none');
+                            arrow.textContent = '▶'; // Right arrow ►
+                            toggleBtn.title = 'Expand adversary details';
+                        } else {
+                            contentDiv.classList.remove('d-none');
+                            arrow.textContent = '▼'; // Down arrow ▼
+                            toggleBtn.title = 'Collapse adversary details';
+                        }
+                    }
+                }
+            }
             if (e.target.classList.contains('delete-adversary-btn')) {
                 const adversaryId = e.target.dataset.adversaryId;
                 const adversary = encounter.adversaries.find(m => m.id === adversaryId);
@@ -911,10 +967,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     const duplicatedAdversary = {
                         ...adversary,
                         id: `m-${Date.now()}`,
-                        name: `${adversary.name} (Copy)`
+                        name: `${adversary.name} (Copy)`,
+                        isCollapsed: false // Default new adversaries to expanded
                     };
                     encounter.adversaries.push(duplicatedAdversary);
                     saveData();
+                    
+                    // Full re-render needed for duplicated adversary
                     renderAdversaries(encounter, isLocked);
                 }
             }
@@ -946,7 +1005,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        adversariesListDiv.addEventListener('input', (e) => {
+        currentAdversariesListDiv.addEventListener('input', (e) => {
             const { adversaryId } = e.target.dataset;
             const adversary = encounter.adversaries.find(m => m.id === adversaryId);
             if (!adversary) return;
@@ -972,7 +1031,7 @@ document.addEventListener('DOMContentLoaded', () => {
             saveData();
         });
 
-        adversariesListDiv.addEventListener('change', (e) => {
+        currentAdversariesListDiv.addEventListener('change', (e) => {
             if (e.target.type === 'checkbox') {
                 const parts = e.target.dataset.id.split('-');
                 const type = parts[0];
@@ -1023,6 +1082,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     } else {
                         hpContainer.classList.remove('maxed-out');
                     }
+                    
+                    // Update HP badge in header
+                    const hpBadge = document.querySelector(`.adversary-header[data-adversary-id="${adversaryId}"] .hp-badge`);
+                    if (hpBadge) {
+                        hpBadge.textContent = `HP: ${adversary.currentHP}/${adversary.maxHP}`;
+                    }
                 } else {
                     adversary.currentStress = checkedCount;
                     // Find the stress-trackers div and its parent container
@@ -1049,6 +1114,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         stressContainer.classList.add('maxed-out');
                     } else {
                         stressContainer.classList.remove('maxed-out');
+                    }
+                    
+                    // Update Stress badge in header
+                    const stressBadge = document.querySelector(`.adversary-header[data-adversary-id="${adversaryId}"] .stress-badge`);
+                    if (stressBadge) {
+                        stressBadge.textContent = `Stress: ${adversary.currentStress}/${adversary.maxStress}`;
                     }
                 }
                 saveData();
