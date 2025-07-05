@@ -80,22 +80,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 <button class="btn btn-primary" id="new-campaign-btn">New Campaign</button>
             </div>
         `;
+        
         if (state.campaigns.length === 0) {
             app.innerHTML += '<p>No campaigns found. Create a new one to get started!</p>';
-            return;
+        } else {
+            const list = document.createElement('div');
+            list.className = 'list-group';
+            state.campaigns.forEach(campaign => {
+                const item = document.createElement('div');
+                item.className = 'list-group-item d-flex justify-content-between align-items-center';
+                item.innerHTML = `
+                    <button type="button" class="btn btn-link text-start flex-grow-1 p-0 campaign-link" data-campaign-id="${campaign.id}">${campaign.name}</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary rename-campaign-btn" data-campaign-id="${campaign.id}">Rename</button>
+                `;
+                list.appendChild(item);
+            });
+            app.appendChild(list);
         }
-        const list = document.createElement('div');
-        list.className = 'list-group';
-        state.campaigns.forEach(campaign => {
-            const item = document.createElement('div');
-            item.className = 'list-group-item d-flex justify-content-between align-items-center';
-            item.innerHTML = `
-                <button type="button" class="btn btn-link text-start flex-grow-1 p-0 campaign-link" data-campaign-id="${campaign.id}">${campaign.name}</button>
-                <button type="button" class="btn btn-sm btn-outline-secondary rename-campaign-btn" data-campaign-id="${campaign.id}">Rename</button>
-            `;
-            list.appendChild(item);
-        });
-        app.appendChild(list);
 
         // Add event listeners for campaign links, rename buttons, and new campaign button
         app.addEventListener('click', (e) => {
@@ -212,6 +213,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h3>Session Details</h3>
                 <div>
+                    ${session.isLocked ? '<button class="btn btn-danger me-2" id="delete-session-btn"><i class="fas fa-trash"></i> Delete Session</button>' : ''}
                     <button class="btn btn-warning me-2" id="toggle-lock-btn">${session.isLocked ? '<i class="fas fa-lock"></i> Unlock' : '<i class="fas fa-lock-open"></i> Lock'}</button>
                     <button class="btn btn-secondary" id="back-to-sessions">Back to Sessions</button>
                 </div>
@@ -343,6 +345,21 @@ document.addEventListener('DOMContentLoaded', () => {
             saveData();
             render();
         });
+
+        // Add delete session button listener if the session is locked
+        const deleteSessionBtn = document.getElementById('delete-session-btn');
+        if (deleteSessionBtn) {
+            deleteSessionBtn.addEventListener('click', () => {
+                const confirmMessage = `Delete session "${session.name}"? This action cannot be undone.`;
+                if (confirm(confirmMessage)) {
+                    // Remove the session from the campaign
+                    campaign.sessions = campaign.sessions.filter(s => s.id !== session.id);
+                    saveData();
+                    // Navigate back to sessions list
+                    navigate('sessions', campaign.id);
+                }
+            });
+        }
 
         document.getElementById('back-to-sessions').addEventListener('click', () => navigate('sessions', campaign.id));
         document.getElementById('new-encounter-btn').addEventListener('click', () => {
