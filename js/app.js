@@ -459,6 +459,161 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
+    const showHelpModal = () => {
+        const existingModal = document.getElementById('help-modal');
+        if (existingModal) existingModal.remove();
+
+        const modalHtml = `
+        <div class="modal fade" id="help-modal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title"><i class="fas fa-question-circle me-2"></i>Daggerheart Tracker Help</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="accordion" id="help-accordion">
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#campaigns-help">
+                                        <i class="fas fa-folder me-2"></i>Campaign Management
+                                    </button>
+                                </h2>
+                                <div id="campaigns-help" class="accordion-collapse collapse show">
+                                    <div class="accordion-body">
+                                        <ul>
+                                            <li><strong>Create Campaign:</strong> Click "New Campaign" to start a new campaign</li>
+                                            <li><strong>Rename Campaign:</strong> Use the "Rename" button next to any campaign</li>
+                                            <li><strong>Import/Export:</strong> Access data management from Settings to backup or restore campaigns</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#sessions-help">
+                                        <i class="fas fa-calendar me-2"></i>Session Management
+                                    </button>
+                                </h2>
+                                <div id="sessions-help" class="accordion-collapse collapse">
+                                    <div class="accordion-body">
+                                        <ul>
+                                            <li><strong>Session Continuation:</strong> Fear and incomplete counters automatically carry over to new sessions</li>
+                                            <li><strong>Lock Session:</strong> Lock completed sessions to prevent accidental changes</li>
+                                            <li><strong>Delete Session:</strong> Delete button only appears when session is locked - requires confirmation</li>
+                                            <li><strong>Session Notes:</strong> Use the character notes field for session-specific information</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#rests-help">
+                                        <i class="fas fa-bed me-2"></i>Rest Tracking
+                                    </button>
+                                </h2>
+                                <div id="rests-help" class="accordion-collapse collapse">
+                                    <div class="accordion-body">
+                                        <ul>
+                                            <li><strong>Short Rests:</strong> Check boxes for up to 3 short rests per day</li>
+                                            <li><strong>Long Rest Button:</strong> Increments long rest count by 1 and clears all short rests</li>
+                                            <li><strong>Day Tracking:</strong> Long rest count helps track how many days have passed</li>
+                                            <li><strong>Starting Fear:</strong> Shows fear level at session start (carries from previous session)</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#counters-help">
+                                        <i class="fas fa-stopwatch me-2"></i>Session Counters
+                                    </button>
+                                </h2>
+                                <div id="counters-help" class="accordion-collapse collapse">
+                                    <div class="accordion-body">
+                                        <ul>
+                                            <li><strong>Named Counters:</strong> Track events like "Army arrival: 5 days" or "Ritual completion: 3 phases"</li>
+                                            <li><strong>Carry Forward:</strong> Only incomplete counters carry over to new sessions</li>
+                                            <li><strong>Completion:</strong> Check "Completed" to prevent counter from carrying forward</li>
+                                            <li><strong>Reset:</strong> Use reset button to restore counter to starting value</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#adversaries-help">
+                                        <i class="fas fa-dragon me-2"></i>Adversary Management
+                                    </button>
+                                </h2>
+                                <div id="adversaries-help" class="accordion-collapse collapse">
+                                    <div class="accordion-body">
+                                        <ul>
+                                            <li><strong>SRD Adversaries:</strong> Choose from 129+ pre-loaded creatures from the official SRD</li>
+                                            <li><strong>Custom Adversaries:</strong> Create your own with custom stats and images</li>
+                                            <li><strong>HP/Stress Tracking:</strong> Click checkboxes to track damage - background turns red when maxed</li>
+                                            <li><strong>Duplicate:</strong> Copy adversaries to reuse similar creatures</li>
+                                            <li><strong>Confirmation:</strong> "For real?" confirmation prevents accidental deletions</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#data-help">
+                                        <i class="fas fa-database me-2"></i>Data Management
+                                    </button>
+                                </h2>
+                                <div id="data-help" class="accordion-collapse collapse">
+                                    <div class="accordion-body">
+                                        <ul>
+                                            <li><strong>Smart Import:</strong> Updates campaigns with same name, adds new ones without deleting existing data</li>
+                                            <li><strong>Auto Backup:</strong> Clear data function automatically exports backup before deletion</li>
+                                            <li><strong>Local Storage:</strong> All data saved locally in your browser - no account required</li>
+                                            <li><strong>Export Format:</strong> JSON format compatible with other tools and backup services</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#tips-help">
+                                        <i class="fas fa-lightbulb me-2"></i>Pro Tips
+                                    </button>
+                                </h2>
+                                <div id="tips-help" class="accordion-collapse collapse">
+                                    <div class="accordion-body">
+                                        <ul>
+                                            <li><strong>Red Backgrounds:</strong> Indicate maxed out HP/Stress for quick visual reference</li>
+                                            <li><strong>Session Flow:</strong> Create session → Track encounters → Lock when complete → Start new session</li>
+                                            <li><strong>Counter Examples:</strong> "Royal wedding: 7 days", "Demon portal: 3 rituals", "Plague cure: 5 ingredients"</li>
+                                            <li><strong>Fear Management:</strong> Use +/- buttons or direct input for quick fear adjustments</li>
+                                            <li><strong>Backup Strategy:</strong> Export campaigns regularly, especially before major sessions</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        `;
+        
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        const modal = new bootstrap.Modal(document.getElementById('help-modal'));
+        modal.show();
+    };
+
     const renderCounters = (session) => {
         const countersContainer = document.getElementById('counters-container');
         const disabled = session.isLocked ? 'disabled' : '';
@@ -1098,6 +1253,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+
+    document.getElementById('help-btn').addEventListener('click', () => {
+        showHelpModal();
+    });
 
     document.getElementById('settings-btn').addEventListener('click', () => {
         navigate('settings');
