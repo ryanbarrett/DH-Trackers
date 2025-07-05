@@ -825,16 +825,26 @@ document.addEventListener('DOMContentLoaded', () => {
         const adversariesListDiv = document.getElementById(`adversaries-list-${encounter.id}`);
         const disabled = isLocked ? 'disabled' : '';
         
-        // Remove all existing event listeners by cloning the node
-        const newAdversariesListDiv = adversariesListDiv.cloneNode(false);
-        adversariesListDiv.parentNode.replaceChild(newAdversariesListDiv, adversariesListDiv);
+        // Clear existing content but keep the element to preserve event listeners
+        adversariesListDiv.innerHTML = '';
         
-        // Use the new div for the rest of the function
-        const currentAdversariesListDiv = document.getElementById(`adversaries-list-${encounter.id}`);
-        currentAdversariesListDiv.innerHTML = '';
+        // Remove existing event listeners to prevent duplicates
+        adversariesListDiv.removeEventListener('click', adversariesListDiv._clickHandler);
+        adversariesListDiv.removeEventListener('input', adversariesListDiv._inputHandler);  
+        adversariesListDiv.removeEventListener('change', adversariesListDiv._changeHandler);
+        
+        // Create new event handlers and store references
+        adversariesListDiv._clickHandler = (e) => handleAdversaryClick(e, encounter.id, isLocked);
+        adversariesListDiv._inputHandler = (e) => handleAdversaryInput(e, encounter.id, isLocked);
+        adversariesListDiv._changeHandler = (e) => handleAdversaryChange(e, encounter.id, isLocked);
+        
+        // Attach event listeners
+        adversariesListDiv.addEventListener('click', adversariesListDiv._clickHandler);
+        adversariesListDiv.addEventListener('input', adversariesListDiv._inputHandler);
+        adversariesListDiv.addEventListener('change', adversariesListDiv._changeHandler);
         
         if (encounter.adversaries.length === 0) {
-            currentAdversariesListDiv.innerHTML = '<small>No adversaries in this encounter.</small>';
+            adversariesListDiv.innerHTML = '<small>No adversaries in this encounter.</small>';
             return;
         }
 
@@ -919,212 +929,232 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 </div>
             `;
-            currentAdversariesListDiv.appendChild(adversaryDiv);
+            adversariesListDiv.appendChild(adversaryDiv);
         });
+    };
 
-        currentAdversariesListDiv.addEventListener('click', (e) => {
-            // Handle collapse/expand
-            if (e.target.classList.contains('collapse-toggle-btn') || e.target.classList.contains('collapse-arrow')) {
-                const adversaryId = e.target.dataset.adversaryId;
-                const adversary = encounter.adversaries.find(m => m.id === adversaryId);
-                if (adversary) {
-                    adversary.isCollapsed = !adversary.isCollapsed;
-                    saveData();
-                    
-                    // Update just this adversary's UI instead of full re-render
-                    const contentDiv = document.querySelector(`.adversary-content[data-adversary-id="${adversaryId}"]`);
-                    const arrow = document.querySelector(`.collapse-arrow[data-adversary-id="${adversaryId}"]`);
-                    const toggleBtn = document.querySelector(`.collapse-toggle-btn[data-adversary-id="${adversaryId}"]`);
-                    
-                    if (contentDiv && arrow && toggleBtn) {
-                        if (adversary.isCollapsed) {
-                            contentDiv.classList.add('d-none');
-                            arrow.textContent = '▶'; // Right arrow ►
-                            toggleBtn.title = 'Expand adversary details';
-                        } else {
-                            contentDiv.classList.remove('d-none');
-                            arrow.textContent = '▼'; // Down arrow ▼
-                            toggleBtn.title = 'Collapse adversary details';
-                        }
+    const handleAdversaryClick = (e, encounterId, isLocked) => {
+        // Get current encounter from state
+        const currentCampaign = state.campaigns.find(c => c.id === state.selectedCampaignId);
+        const currentSession = currentCampaign ? currentCampaign.sessions.find(s => s.id === state.selectedSessionId) : null;
+        const encounter = currentSession ? currentSession.encounters.find(enc => enc.id === encounterId) : null;
+        
+        if (!encounter) {
+            console.error('Error: Current encounter not found in state.');
+            return;
+        }
+        
+        // Handle collapse/expand
+        if (e.target.classList.contains('collapse-toggle-btn') || e.target.classList.contains('collapse-arrow')) {
+            const adversaryId = e.target.dataset.adversaryId;
+            const adversary = encounter.adversaries.find(m => m.id === adversaryId);
+            if (adversary) {
+                adversary.isCollapsed = !adversary.isCollapsed;
+                saveData();
+                
+                // Update just this adversary's UI instead of full re-render
+                const contentDiv = document.querySelector(`.adversary-content[data-adversary-id="${adversaryId}"]`);
+                const arrow = document.querySelector(`.collapse-arrow[data-adversary-id="${adversaryId}"]`);
+                const toggleBtn = document.querySelector(`.collapse-toggle-btn[data-adversary-id="${adversaryId}"]`);
+                
+                if (contentDiv && arrow && toggleBtn) {
+                    if (adversary.isCollapsed) {
+                        contentDiv.classList.add('d-none');
+                        arrow.textContent = '▶'; // Right arrow ►
+                        toggleBtn.title = 'Expand adversary details';
+                    } else {
+                        contentDiv.classList.remove('d-none');
+                        arrow.textContent = '▼'; // Down arrow ▼
+                        toggleBtn.title = 'Collapse adversary details';
                     }
                 }
             }
-            if (e.target.classList.contains('delete-adversary-btn')) {
-                const adversaryId = e.target.dataset.adversaryId;
-                const adversary = encounter.adversaries.find(m => m.id === adversaryId);
-                const adversaryName = adversary ? adversary.name : 'this adversary';
-                
-                if (confirm(`Delete ${adversaryName}? For real?`)) {
-                    encounter.adversaries = encounter.adversaries.filter(m => m.id !== adversaryId);
-                    saveData();
-                    renderAdversaries(encounter, isLocked);
-                }
-            }
-            if (e.target.classList.contains('duplicate-adversary-btn')) {
-                const adversaryId = e.target.dataset.adversaryId;
-                const adversary = encounter.adversaries.find(m => m.id === adversaryId);
-                if (adversary) {
-                    const duplicatedAdversary = {
-                        ...adversary,
-                        id: `m-${Date.now()}`,
-                        name: `${adversary.name} (Copy)`,
-                        isCollapsed: false // Default new adversaries to expanded
-                    };
-                    encounter.adversaries.push(duplicatedAdversary);
-                    saveData();
-                    
-                    // Full re-render needed for duplicated adversary
-                    renderAdversaries(encounter, isLocked);
-                }
-            }
-            if (e.target.classList.contains('set-image-btn')) {
-                const adversaryId = e.target.dataset.adversaryId;
-                const input = document.createElement('input');
-                input.type = 'file';
-                input.accept = 'image/*';
-                input.onchange = (event) => {
-                    const file = event.target.files[0];
-                    if (!file) return;
-                    const reader = new FileReader();
-                    reader.onload = (readerEvent) => {
-                        const adversary = encounter.adversaries.find(m => m.id === adversaryId);
-                        adversary.imageUrl = readerEvent.target.result;
-                        saveData();
-                        renderAdversaries(encounter, isLocked);
-                    };
-                    reader.readAsDataURL(file);
-                };
-                input.click();
-            }
-            if (e.target.classList.contains('adversary-image') && e.target.src) {
-                const adversaryId = e.target.dataset.adversaryId;
-                const adversary = encounter.adversaries.find(m => m.id === adversaryId);
-                if (adversary && adversary.imageUrl) {
-                    showImagePreview(adversary.imageUrl, adversary.name);
-                }
-            }
-        });
-
-        currentAdversariesListDiv.addEventListener('input', (e) => {
-            const { adversaryId } = e.target.dataset;
+        }
+        if (e.target.classList.contains('delete-adversary-btn')) {
+            const adversaryId = e.target.dataset.adversaryId;
             const adversary = encounter.adversaries.find(m => m.id === adversaryId);
-            if (!adversary) return;
+            const adversaryName = adversary ? adversary.name : 'this adversary';
+            
+            if (confirm(`Delete ${adversaryName}? For real?`)) {
+                encounter.adversaries = encounter.adversaries.filter(m => m.id !== adversaryId);
+                saveData();
+                renderAdversaries(encounter, isLocked);
+            }
+        }
+        if (e.target.classList.contains('duplicate-adversary-btn')) {
+            const adversaryId = e.target.dataset.adversaryId;
+            const adversary = encounter.adversaries.find(m => m.id === adversaryId);
+            if (adversary) {
+                const duplicatedAdversary = {
+                    ...adversary,
+                    id: `m-${Date.now()}`,
+                    name: `${adversary.name} (Copy)`,
+                    isCollapsed: false // Default new adversaries to expanded
+                };
+                encounter.adversaries.push(duplicatedAdversary);
+                saveData();
+                
+                // Full re-render needed for duplicated adversary
+                renderAdversaries(encounter, isLocked);
+            }
+        }
+        if (e.target.classList.contains('set-image-btn')) {
+            const adversaryId = e.target.dataset.adversaryId;
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (readerEvent) => {
+                    const adversary = encounter.adversaries.find(m => m.id === adversaryId);
+                    adversary.imageUrl = readerEvent.target.result;
+                    saveData();
+                    renderAdversaries(encounter, isLocked);
+                };
+                reader.readAsDataURL(file);
+            };
+            input.click();
+        }
+        if (e.target.classList.contains('adversary-image') && e.target.src) {
+            const adversaryId = e.target.dataset.adversaryId;
+            const adversary = encounter.adversaries.find(m => m.id === adversaryId);
+            if (adversary && adversary.imageUrl) {
+                showImagePreview(adversary.imageUrl, adversary.name);
+            }
+        }
+    };
 
-            if (e.target.classList.contains('adversary-name-input')) {
-                adversary.name = e.target.value;
-            } else if (e.target.classList.contains('adversary-note')) {
-                const { noteType } = e.target.dataset;
-                if (noteType === 'stats') {
-                    adversary.stats = e.target.value;
-                } else {
-                    if (!adversary.notes) adversary.notes = {};
-                    adversary.notes[noteType] = e.target.value;
+    const handleAdversaryInput = (e, encounterId, isLocked) => {
+        // Get current encounter from state
+        const currentCampaign = state.campaigns.find(c => c.id === state.selectedCampaignId);
+        const currentSession = currentCampaign ? currentCampaign.sessions.find(s => s.id === state.selectedSessionId) : null;
+        const encounter = currentSession ? currentSession.encounters.find(enc => enc.id === encounterId) : null;
+        
+        if (!encounter) {
+            console.error('Error: Current encounter not found in state.');
+            return;
+        }
+        
+        const { adversaryId } = e.target.dataset;
+        const adversary = encounter.adversaries.find(m => m.id === adversaryId);
+        if (!adversary) return;
+
+        if (e.target.classList.contains('adversary-name-input')) {
+            adversary.name = e.target.value;
+        } else if (e.target.classList.contains('adversary-note')) {
+            const { noteType } = e.target.dataset;
+            if (noteType === 'stats') {
+                adversary.stats = e.target.value;
+            } else {
+                if (!adversary.notes) adversary.notes = {};
+                adversary.notes[noteType] = e.target.value;
+            }
+        } else if (e.target.classList.contains('adversary-stat-input')) {
+            const { stat } = e.target.dataset;
+            const newValue = parseInt(e.target.value, 10) || 0;
+            adversary[stat] = newValue;
+            if (stat === 'maxHP') adversary.currentHP = Math.min(adversary.currentHP, newValue);
+            if (stat === 'maxStress') adversary.currentStress = Math.min(adversary.currentStress, newValue);
+            renderAdversaries(encounter, isLocked); // Re-render for stat changes
+        }
+        saveData();
+    };
+
+    const handleAdversaryChange = (e, encounterId, isLocked) => {
+        if (e.target.type === 'checkbox') {
+            const parts = e.target.dataset.id.split('-');
+            const type = parts[0];
+            const adversaryId = parts.slice(1).join('-');
+
+            // Fetch the latest session and encounter from the state
+            const currentCampaign = state.campaigns.find(c => c.id === state.selectedCampaignId);
+            const currentSession = currentCampaign ? currentCampaign.sessions.find(s => s.id === state.selectedSessionId) : null;
+            const encounter = currentSession ? currentSession.encounters.find(enc => enc.id === encounterId) : null;
+
+            if (!encounter) {
+                console.error('Error: Current encounter not found in state.');
+                return;
+            }
+
+            const adversary = encounter.adversaries.find(m => m.id === adversaryId);
+
+            if (!adversary) {
+                console.error('Error: Adversary with ID', adversaryId, 'not found in current encounter.');
+                return;
+            }
+
+            const checkedCount = e.target.parentElement.querySelectorAll('input:checked').length;
+            if (type === 'hp') {
+                adversary.currentHP = checkedCount;
+                // Find the hp-trackers div and its parent container
+                const hpTrackers = e.target.closest('.hp-trackers');
+                const hpContainer = hpTrackers.parentElement;
+                
+                // Find and update the text node (everything before the hp-trackers div)
+                const textNodes = [];
+                for (let node of hpContainer.childNodes) {
+                    if (node.nodeType === Node.TEXT_NODE || (node.nodeType === Node.ELEMENT_NODE && node !== hpTrackers)) {
+                        textNodes.push(node);
+                    }
                 }
-            } else if (e.target.classList.contains('adversary-stat-input')) {
-                const { stat } = e.target.dataset;
-                const newValue = parseInt(e.target.value, 10) || 0;
-                adversary[stat] = newValue;
-                if (stat === 'maxHP') adversary.currentHP = Math.min(adversary.currentHP, newValue);
-                if (stat === 'maxStress') adversary.currentStress = Math.min(adversary.currentStress, newValue);
-                renderAdversaries(encounter, isLocked); // Re-render for stat changes
+                // Remove old text nodes and elements (except trackers)
+                textNodes.forEach(node => node.remove());
+                
+                // Add new text at the beginning
+                const newText = document.createElement('span');
+                newText.innerHTML = `<strong>HP:</strong> (${adversary.currentHP}/${adversary.maxHP})`;
+                hpContainer.insertBefore(newText, hpTrackers);
+                
+                // Update maxed-out class on the parent div
+                if (adversary.currentHP === adversary.maxHP) {
+                    hpContainer.classList.add('maxed-out');
+                } else {
+                    hpContainer.classList.remove('maxed-out');
+                }
+                
+                // Update HP badge in header
+                const hpBadge = document.querySelector(`.adversary-header[data-adversary-id="${adversaryId}"] .hp-badge`);
+                if (hpBadge) {
+                    hpBadge.textContent = `HP: ${adversary.currentHP}/${adversary.maxHP}`;
+                }
+            } else {
+                adversary.currentStress = checkedCount;
+                // Find the stress-trackers div and its parent container
+                const stressTrackers = e.target.closest('.stress-trackers');
+                const stressContainer = stressTrackers.parentElement;
+                
+                // Find and update the text node (everything before the stress-trackers div)
+                const textNodes = [];
+                for (let node of stressContainer.childNodes) {
+                    if (node.nodeType === Node.TEXT_NODE || (node.nodeType === Node.ELEMENT_NODE && node !== stressTrackers)) {
+                        textNodes.push(node);
+                    }
+                }
+                // Remove old text nodes and elements (except trackers)
+                textNodes.forEach(node => node.remove());
+                
+                // Add new text at the beginning
+                const newText = document.createElement('span');
+                newText.innerHTML = `<strong>Stress:</strong> (${adversary.currentStress}/${adversary.maxStress})`;
+                stressContainer.insertBefore(newText, stressTrackers);
+                
+                // Update maxed-out class on the parent div
+                if (adversary.currentStress === adversary.maxStress) {
+                    stressContainer.classList.add('maxed-out');
+                } else {
+                    stressContainer.classList.remove('maxed-out');
+                }
+                
+                // Update Stress badge in header
+                const stressBadge = document.querySelector(`.adversary-header[data-adversary-id="${adversaryId}"] .stress-badge`);
+                if (stressBadge) {
+                    stressBadge.textContent = `Stress: ${adversary.currentStress}/${adversary.maxStress}`;
+                }
             }
             saveData();
-        });
-
-        currentAdversariesListDiv.addEventListener('change', (e) => {
-            if (e.target.type === 'checkbox') {
-                const parts = e.target.dataset.id.split('-');
-                const type = parts[0];
-                const adversaryId = parts.slice(1).join('-');
-
-                // Fetch the latest session and encounter from the state
-                const currentCampaign = state.campaigns.find(c => c.id === state.selectedCampaignId);
-                const currentSession = currentCampaign ? currentCampaign.sessions.find(s => s.id === state.selectedSessionId) : null;
-                const currentEncounter = currentSession ? currentSession.encounters.find(enc => enc.id === encounter.id) : null;
-
-                if (!currentEncounter) {
-                    console.error('Error: Current encounter not found in state.');
-                    return;
-                }
-
-                const adversary = currentEncounter.adversaries.find(m => m.id === adversaryId);
-
-                if (!adversary) {
-                    console.error('Error: Adversary with ID', adversaryId, 'not found in current encounter.');
-                    return;
-                }
-
-                const checkedCount = e.target.parentElement.querySelectorAll('input:checked').length;
-                if (type === 'hp') {
-                    adversary.currentHP = checkedCount;
-                    // Find the hp-trackers div and its parent container
-                    const hpTrackers = e.target.closest('.hp-trackers');
-                    const hpContainer = hpTrackers.parentElement;
-                    
-                    // Find and update the text node (everything before the hp-trackers div)
-                    const textNodes = [];
-                    for (let node of hpContainer.childNodes) {
-                        if (node.nodeType === Node.TEXT_NODE || (node.nodeType === Node.ELEMENT_NODE && node !== hpTrackers)) {
-                            textNodes.push(node);
-                        }
-                    }
-                    // Remove old text nodes and elements (except trackers)
-                    textNodes.forEach(node => node.remove());
-                    
-                    // Add new text at the beginning
-                    const newText = document.createElement('span');
-                    newText.innerHTML = `<strong>HP:</strong> (${adversary.currentHP}/${adversary.maxHP})`;
-                    hpContainer.insertBefore(newText, hpTrackers);
-                    
-                    // Update maxed-out class on the parent div
-                    if (adversary.currentHP === adversary.maxHP) {
-                        hpContainer.classList.add('maxed-out');
-                    } else {
-                        hpContainer.classList.remove('maxed-out');
-                    }
-                    
-                    // Update HP badge in header
-                    const hpBadge = document.querySelector(`.adversary-header[data-adversary-id="${adversaryId}"] .hp-badge`);
-                    if (hpBadge) {
-                        hpBadge.textContent = `HP: ${adversary.currentHP}/${adversary.maxHP}`;
-                    }
-                } else {
-                    adversary.currentStress = checkedCount;
-                    // Find the stress-trackers div and its parent container
-                    const stressTrackers = e.target.closest('.stress-trackers');
-                    const stressContainer = stressTrackers.parentElement;
-                    
-                    // Find and update the text node (everything before the stress-trackers div)
-                    const textNodes = [];
-                    for (let node of stressContainer.childNodes) {
-                        if (node.nodeType === Node.TEXT_NODE || (node.nodeType === Node.ELEMENT_NODE && node !== stressTrackers)) {
-                            textNodes.push(node);
-                        }
-                    }
-                    // Remove old text nodes and elements (except trackers)
-                    textNodes.forEach(node => node.remove());
-                    
-                    // Add new text at the beginning
-                    const newText = document.createElement('span');
-                    newText.innerHTML = `<strong>Stress:</strong> (${adversary.currentStress}/${adversary.maxStress})`;
-                    stressContainer.insertBefore(newText, stressTrackers);
-                    
-                    // Update maxed-out class on the parent div
-                    if (adversary.currentStress === adversary.maxStress) {
-                        stressContainer.classList.add('maxed-out');
-                    } else {
-                        stressContainer.classList.remove('maxed-out');
-                    }
-                    
-                    // Update Stress badge in header
-                    const stressBadge = document.querySelector(`.adversary-header[data-adversary-id="${adversaryId}"] .stress-badge`);
-                    if (stressBadge) {
-                        stressBadge.textContent = `Stress: ${adversary.currentStress}/${adversary.maxStress}`;
-                    }
-                }
-                saveData();
-            }
-        });
+        }
     };
 
     const generateCheckboxes = (type, adversaryId, max, current, disabled) => {
