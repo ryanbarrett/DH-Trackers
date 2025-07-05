@@ -3,7 +3,6 @@
 
 document.addEventListener('DOMContentLoaded', () => {
     const app = document.getElementById('app');
-    const newCampaignBtn = document.getElementById('new-campaign-btn');
 
     let state = {
         campaigns: [],
@@ -75,7 +74,12 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const renderCampaignListView = () => {
-        app.innerHTML = '<h2>Campaigns</h2>';
+        app.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2>Campaigns</h2>
+                <button class="btn btn-primary" id="new-campaign-btn">New Campaign</button>
+            </div>
+        `;
         if (state.campaigns.length === 0) {
             app.innerHTML += '<p>No campaigns found. Create a new one to get started!</p>';
             return;
@@ -93,7 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         app.appendChild(list);
 
-        // Add event listeners for campaign links and rename buttons
+        // Add event listeners for campaign links, rename buttons, and new campaign button
         app.addEventListener('click', (e) => {
             if (e.target.classList.contains('campaign-link')) {
                 const campaignId = e.target.dataset.campaignId;
@@ -109,6 +113,20 @@ document.addEventListener('DOMContentLoaded', () => {
                         saveData();
                         render();
                     }
+                }
+            }
+            if (e.target.id === 'new-campaign-btn') {
+                const campaignName = prompt('Enter campaign name:');
+                if (campaignName) {
+                    const newCampaign = {
+                        id: `c-${new Date().getTime()}`,
+                        name: campaignName,
+                        created: new Date().toISOString(),
+                        sessions: []
+                    };
+                    state.campaigns.push(newCampaign);
+                    saveData();
+                    render();
                 }
             }
         });
@@ -982,20 +1000,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // --- GLOBAL EVENT LISTENERS ---
-    newCampaignBtn.addEventListener('click', () => {
-        const campaignName = prompt('Enter campaign name:');
-        if (campaignName) {
-            const newCampaign = {
-                id: `c-${new Date().getTime()}`,
-                name: campaignName,
-                created: new Date().toISOString(),
-                sessions: []
-            };
-            state.campaigns.push(newCampaign);
-            saveData();
-            render();
-        }
-    });
 
     document.addEventListener('click', (e) => {
         if (e.target.id === 'export-btn') {
