@@ -460,12 +460,13 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const showHelpModal = () => {
+        console.log('Help modal triggered'); // Debug log
         const existingModal = document.getElementById('help-modal');
         if (existingModal) existingModal.remove();
 
         const modalHtml = `
         <div class="modal fade" id="help-modal" tabindex="-1">
-            <div class="modal-dialog modal-lg">
+            <div class="modal-dialog modal-lg modal-dialog-scrollable">
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title"><i class="fas fa-question-circle me-2"></i>Daggerheart Tracker Help</h5>
@@ -610,8 +611,19 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         
         document.body.insertAdjacentHTML('beforeend', modalHtml);
-        const modal = new bootstrap.Modal(document.getElementById('help-modal'));
-        modal.show();
+        
+        // Small delay to ensure DOM is ready, especially on mobile
+        setTimeout(() => {
+            const modalElement = document.getElementById('help-modal');
+            if (modalElement) {
+                const modal = new bootstrap.Modal(modalElement, {
+                    backdrop: true,
+                    keyboard: true,
+                    focus: true
+                });
+                modal.show();
+            }
+        }, 100);
     };
 
     const renderCounters = (session) => {
@@ -1254,8 +1266,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
 
-    document.getElementById('help-btn').addEventListener('click', () => {
-        showHelpModal();
+    // Help button event listener with mobile support
+    document.addEventListener('click', (e) => {
+        if (e.target.id === 'help-btn' || e.target.closest('#help-btn')) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Help button clicked'); // Debug log
+            showHelpModal();
+        }
     });
 
     document.getElementById('settings-btn').addEventListener('click', () => {

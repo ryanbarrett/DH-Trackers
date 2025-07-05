@@ -26,3 +26,28 @@ details > summary {
     padding: 5px;
     border-radius: 5px;
 }
+
+/* Mobile optimizations for help modal */
+@media (max-width: 768px) {
+    #help-modal .modal-dialog {
+        margin: 0.5rem;
+        max-width: calc(100% - 1rem);
+    }
+    
+    #help-modal .modal-body {
+        padding: 1rem 0.5rem;
+    }
+    
+    #help-modal .accordion-body {
+        padding: 0.75rem;
+    }
+    
+    #help-modal .accordion-body ul {
+        padding-left: 1rem;
+    }
+    
+    #help-modal .accordion-body li {
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+    }
+}
