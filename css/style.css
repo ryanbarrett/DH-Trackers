@@ -13,11 +13,45 @@ details > summary {
 }
 
 .adversary-image {
-    max-height: 200px;
     width: 100%;
-    object-fit: cover;
+    height: auto;
+    max-height: 180px;
+    min-height: 120px;
+    object-fit: contain;
+    object-position: center;
     background-color: #f8f9fa;
     border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    display: block;
+}
+
+/* Ensure the image container takes available space */
+.adversary-card .col-md-4 {
+    display: flex;
+    flex-direction: column;
+}
+
+.adversary-card .col-md-4 .adversary-image {
+    flex-grow: 1;
+    max-height: 200px;
+}
+
+/* Mobile responsiveness for adversary images */
+@media (max-width: 768px) {
+    .adversary-image {
+        max-height: 150px;
+        min-height: 100px;
+    }
+    
+    .adversary-card .row {
+        flex-direction: column;
+    }
+    
+    .adversary-card .col-md-4,
+    .adversary-card .col-md-8 {
+        max-width: 100%;
+        flex: 0 0 100%;
+    }
 }
 
 .maxed-out {
