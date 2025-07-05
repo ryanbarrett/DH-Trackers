@@ -31,6 +31,9 @@ document.addEventListener('DOMContentLoaded', () => {
                             if (session.name === undefined) {
                                 session.name = `Session ${new Date(session.date).toLocaleDateString()}`;
                             }
+                            if (session.counters === undefined) {
+                                session.counters = [];
+                            }
                         });
                     }
                 });
@@ -152,17 +155,27 @@ document.addEventListener('DOMContentLoaded', () => {
             const sessionName = prompt('Enter session name:', `Session ${campaign.sessions.length + 1}`);
             if (sessionName === null) return;
             
+            // Carry over incomplete counters and fear from previous session
+            const previousSession = campaign.sessions[campaign.sessions.length - 1];
+            const carriedCounters = previousSession && previousSession.counters ? 
+                previousSession.counters.filter(counter => !counter.completed) : [];
+            const previousFear = previousSession ? previousSession.fear : 0;
+            
             const newSession = {
                 id: `s-${new Date().getTime()}`,
                 name: sessionName || `Session ${campaign.sessions.length + 1}`,
                 date: new Date().toISOString(),
-                startingFear: 0,
-                fear: 0,
+                startingFear: previousFear,
+                fear: previousFear,
                 characterNotes: '',
                 shortRests: 0,
                 longRests: 0,
                 isLocked: false,
-                encounters: []
+                encounters: [],
+                counters: carriedCounters.map(counter => ({
+                    ...counter,
+                    id: `counter-${new Date().getTime()}-${Math.random().toString(36).substr(2, 9)}`
+                }))
             };
             campaign.sessions.push(newSession);
             saveData();
@@ -239,6 +252,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 </div>
             </div>
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Session Counters</h5>
+                    <button class="btn btn-sm btn-primary" id="add-counter-btn" ${disabled}>Add Counter</button>
+                </div>
+                <div class="card-body" id="counters-container">
+                    <!-- Counters will be rendered here -->
+                </div>
+            </div>
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h4>Encounters</h4>
                 <button class="btn btn-primary" id="new-encounter-btn" ${disabled}>New Encounter</button>
@@ -246,6 +268,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div id="encounters-list"></div>
         `;
 
+        renderCounters(session);
         renderEncounters(session);
 
         app.querySelectorAll('input, textarea').forEach(input => {
@@ -314,6 +337,27 @@ document.addEventListener('DOMContentLoaded', () => {
             saveData();
             renderEncounters(session);
         });
+
+        document.getElementById('add-counter-btn').addEventListener('click', () => {
+            const counterName = prompt('Enter counter name:', 'Army arrival countdown');
+            if (counterName === null) return;
+            
+            const startingValue = prompt('Enter starting value:', '5');
+            if (startingValue === null) return;
+            
+            const newCounter = {
+                id: `counter-${new Date().getTime()}-${Math.random().toString(36).substr(2, 9)}`,
+                name: counterName || 'New Counter',
+                currentValue: parseInt(startingValue) || 0,
+                startingValue: parseInt(startingValue) || 0,
+                completed: false
+            };
+            
+            if (!session.counters) session.counters = [];
+            session.counters.push(newCounter);
+            saveData();
+            renderCounters(session);
+        });
     };
 
     const renderSettingsView = () => {
@@ -377,6 +421,111 @@ document.addEventListener('DOMContentLoaded', () => {
         // Add event listener for back button
         document.getElementById('back-to-campaigns-btn').addEventListener('click', () => {
             navigate('campaigns');
+        });
+    };
+
+    const renderCounters = (session) => {
+        const countersContainer = document.getElementById('counters-container');
+        const disabled = session.isLocked ? 'disabled' : '';
+        countersContainer.innerHTML = '';
+        
+        if (!session.counters || session.counters.length === 0) {
+            countersContainer.innerHTML = '<p class="text-muted mb-0">No counters added yet.</p>';
+            return;
+        }
+
+        session.counters.forEach(counter => {
+            const counterDiv = document.createElement('div');
+            counterDiv.className = 'counter-item mb-3 p-3 border rounded';
+            counterDiv.innerHTML = `
+                <div class="row align-items-center">
+                    <div class="col-md-4">
+                        <input type="text" class="form-control counter-name-input" value="${counter.name}" data-counter-id="${counter.id}" ${disabled}>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="input-group">
+                            <button class="btn btn-outline-secondary counter-decrement" type="button" data-counter-id="${counter.id}" ${disabled}>-</button>
+                            <input type="number" class="form-control text-center counter-value-input" value="${counter.currentValue}" data-counter-id="${counter.id}" ${disabled}>
+                            <button class="btn btn-outline-secondary counter-increment" type="button" data-counter-id="${counter.id}" ${disabled}>+</button>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-check">
+                            <input class="form-check-input counter-completed" type="checkbox" data-counter-id="${counter.id}" ${counter.completed ? 'checked' : ''} ${disabled}>
+                            <label class="form-check-label">Completed</label>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <button class="btn btn-sm btn-outline-danger delete-counter-btn" data-counter-id="${counter.id}" ${disabled}>Delete</button>
+                        <button class="btn btn-sm btn-outline-secondary reset-counter-btn" data-counter-id="${counter.id}" ${disabled}>Reset</button>
+                    </div>
+                </div>
+            `;
+            countersContainer.appendChild(counterDiv);
+        });
+
+        // Add event listeners for counter interactions
+        countersContainer.addEventListener('click', (e) => {
+            const counterId = e.target.dataset.counterId;
+            if (!counterId) return;
+            
+            const counter = session.counters.find(c => c.id === counterId);
+            if (!counter) return;
+
+            if (e.target.classList.contains('counter-increment')) {
+                counter.currentValue += 1;
+                // Update just the input field
+                const valueInput = document.querySelector(`input.counter-value-input[data-counter-id="${counterId}"]`);
+                if (valueInput) valueInput.value = counter.currentValue;
+                saveData();
+            } else if (e.target.classList.contains('counter-decrement')) {
+                counter.currentValue = Math.max(0, counter.currentValue - 1);
+                // Update just the input field
+                const valueInput = document.querySelector(`input.counter-value-input[data-counter-id="${counterId}"]`);
+                if (valueInput) valueInput.value = counter.currentValue;
+                saveData();
+            } else if (e.target.classList.contains('delete-counter-btn')) {
+                if (confirm(`Delete counter "${counter.name}"?`)) {
+                    session.counters = session.counters.filter(c => c.id !== counterId);
+                    saveData();
+                    renderCounters(session);
+                }
+            } else if (e.target.classList.contains('reset-counter-btn')) {
+                counter.currentValue = counter.startingValue;
+                // Update just the input field
+                const valueInput = document.querySelector(`input.counter-value-input[data-counter-id="${counterId}"]`);
+                if (valueInput) valueInput.value = counter.currentValue;
+                saveData();
+            }
+        });
+
+        // Add event listeners for input changes
+        countersContainer.addEventListener('input', (e) => {
+            const counterId = e.target.dataset.counterId;
+            if (!counterId) return;
+            
+            const counter = session.counters.find(c => c.id === counterId);
+            if (!counter) return;
+
+            if (e.target.classList.contains('counter-name-input')) {
+                counter.name = e.target.value;
+                saveData();
+            } else if (e.target.classList.contains('counter-value-input')) {
+                counter.currentValue = parseInt(e.target.value) || 0;
+                saveData();
+            }
+        });
+
+        // Add event listener for completed checkbox
+        countersContainer.addEventListener('change', (e) => {
+            if (e.target.classList.contains('counter-completed')) {
+                const counterId = e.target.dataset.counterId;
+                const counter = session.counters.find(c => c.id === counterId);
+                if (counter) {
+                    counter.completed = e.target.checked;
+                    saveData();
+                }
+            }
         });
     };
 
