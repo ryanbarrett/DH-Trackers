@@ -626,6 +626,44 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 100);
     };
 
+    const showImagePreview = (imageUrl, imageName) => {
+        const existingModal = document.getElementById('image-preview-modal');
+        if (existingModal) existingModal.remove();
+
+        const modalHtml = `
+        <div class="modal fade" id="image-preview-modal" tabindex="-1">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title"><i class="fas fa-image me-2"></i>${imageName}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body text-center p-2">
+                        <img src="${imageUrl}" class="img-fluid" alt="${imageName}" style="max-width: 100%; max-height: 80vh; object-fit: contain;">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        `;
+        
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        
+        setTimeout(() => {
+            const modalElement = document.getElementById('image-preview-modal');
+            if (modalElement) {
+                const modal = new bootstrap.Modal(modalElement, {
+                    backdrop: true,
+                    keyboard: true,
+                    focus: true
+                });
+                modal.show();
+            }
+        }, 100);
+    };
+
     const renderCounters = (session) => {
         const countersContainer = document.getElementById('counters-container');
         const disabled = session.isLocked ? 'disabled' : '';
@@ -799,7 +837,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="row">
                     <div class="col-md-4">
                         <input type="text" class="form-control form-control-lg mb-2 adversary-name-input" value="${adversary.name}" data-adversary-id="${adversary.id}" ${disabled}>
-                        <img src="${adversary.imageUrl || ''}" class="adversary-image img-fluid rounded ${!adversary.imageUrl ? 'd-none' : ''}" alt="${adversary.name}">
+                        <img src="${adversary.imageUrl || ''}" class="adversary-image img-fluid rounded ${!adversary.imageUrl ? 'd-none' : ''}" alt="${adversary.name}" data-adversary-id="${adversary.id}" style="cursor: ${adversary.imageUrl ? 'pointer' : 'default'};">
                         <button class="btn btn-sm btn-secondary w-100 mt-2 set-image-btn" data-adversary-id="${adversary.id}" ${disabled}>Set Image</button>
                     </div>
                     <div class="col-md-8">
@@ -898,6 +936,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     reader.readAsDataURL(file);
                 };
                 input.click();
+            }
+            if (e.target.classList.contains('adversary-image') && e.target.src) {
+                const adversaryId = e.target.dataset.adversaryId;
+                const adversary = encounter.adversaries.find(m => m.id === adversaryId);
+                if (adversary && adversary.imageUrl) {
+                    showImagePreview(adversary.imageUrl, adversary.name);
+                }
             }
         });
 
